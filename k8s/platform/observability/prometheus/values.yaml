@@ -1,0 +1,59 @@
+prometheus:
+  prometheusSpec:
+    serviceMonitorSelectorNilUsesHelmValues: false
+    serviceMonitorSelector:
+      matchLabels:
+        release: kube-prometheus-stack
+    retention: 15d
+    resources:
+      limits:
+        cpu: 1000m
+        memory: 2Gi
+      requests:
+        cpu: 500m
+        memory: 1Gi
+
+grafana:
+  enabled: true
+  adminPassword: "ironnode-admin"
+  persistence:
+    enabled: true
+    size: 10Gi
+  service:
+    type: LoadBalancer
+    port: 3000
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  dashboards:
+    default:
+      ironnode-ai-metrics:
+        gnetId: 1
+        revision: 1
+        datasource: Prometheus
+  sidecar:
+    dashboards:
+      enabled: true
+      searchNamespace: monitoring
+
+alertmanager:
+  enabled: true
+  config:
+    global:
+      resolve_timeout: 5m
+    route:
+      group_by: ['alertname']
+      group_wait: 10s
+      group_interval: 10s
+      repeat_interval: 12h
+      receiver: 'null'
+
+nodeExporter:
+  enabled: true
+
+kubeStateMetrics:
+  enabled: true

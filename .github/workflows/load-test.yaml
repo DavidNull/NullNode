@@ -1,0 +1,45 @@
+name: Load Test AI Gateway
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'k8s/platform/litellm/**'
+
+jobs:
+  load-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install k3d
+        run: |
+          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.6.0 bash
+
+      - name: Create test cluster
+        run: k3d cluster create ironnode-test --port '4000:4000@loadbalancer' --port '3000:3000@loadbalancer'
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.14.0'
+
+      - name: Deploy LiteLLM
+        run: |
+          helm install litellm k8s/platform/litellm --set service.type=LoadBalancer
+
+      - name: Wait for deployment
+        run: kubectl wait --for=condition=available --timeout=300s deployment/litellm
+
+      - name: Run load test
+        run: |
+          # Install Apache Bench
+          sudo apt-get update && sudo apt-get install -y apache2-utils
+          
+          # Run load test against the gateway
+          ab -n 1000 -c 10 -p test-payload.json -T application/json http://localhost:4000/v1/chat/completions
+
+      - name: Cleanup
+        if: always()
+        run: k3d cluster delete ironnode-test

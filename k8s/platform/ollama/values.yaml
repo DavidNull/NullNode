@@ -1,0 +1,38 @@
+replicaCount: 1
+
+image:
+  repository: ollama/ollama
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 11434
+
+persistence:
+  enabled: true
+  size: 50Gi
+  storageClass: "local-path"
+
+resources:
+  limits:
+    cpu: 4000m
+    memory: 8Gi
+    nvidia.com/gpu: 1
+  requests:
+    cpu: 2000m
+    memory: 4Gi
+
+models:
+  - name: llama3
+    pull: true
+  - name: mistral
+    pull: true
+
+nodeSelector:
+  accelerator: nvidia-tesla-k80
+
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule

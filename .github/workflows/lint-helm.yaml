@@ -1,0 +1,29 @@
+name: Lint Helm Charts
+
+on:
+  push:
+    paths:
+      - 'k8s/platform/**/Chart.yaml'
+      - 'k8s/platform/**/values.yaml'
+  pull_request:
+    paths:
+      - 'k8s/platform/**/Chart.yaml'
+      - 'k8s/platform/**/values.yaml'
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: 'v3.14.0'
+
+      - name: Lint LiteLLM Chart
+        run: helm lint k8s/platform/litellm
+
+      - name: Lint Ollama Chart
+        run: helm lint k8s/platform/ollama

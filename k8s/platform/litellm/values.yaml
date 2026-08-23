@@ -1,0 +1,57 @@
+replicaCount: 2
+
+image:
+  repository: ghcr.io/berriai/litellm
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: LoadBalancer
+  port: 4000
+  targetPort: 4000
+
+resources:
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 500m
+    memory: 256Mi
+
+autoscaling:
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 10
+  targetCPUUtilizationPercentage: 80
+  targetMemoryUtilizationPercentage: 80
+
+redis:
+  enabled: true
+  host: "redis.platform.svc.cluster.local"
+  port: 6379
+  cacheEnabled: true
+
+environment:
+  LITELLM_MASTER_KEY: "sk-ironnode-master-key-2024"
+  LITELLM_SALT_KEY: "ironnode-salt-key-2024"
+  DATABASE_URL: "postgresql://user:password@postgres.platform.svc.cluster.local:5432/litellm"
+
+modelList:
+  - model_name: ollama/llama3
+    litellm_params:
+      api_base: http://ollama.platform.svc.cluster.local:11434
+      api_key: sk-ollama-key
+  - model_name: ollama/mistral
+    litellm_params:
+      api_base: http://ollama.platform.svc.cluster.local:11434
+      api_key: sk-ollama-key
+
+generalSettings:
+  drop_params: ["messages", "tools"]
+  set_key: "sk-ironnode-key"
+
+security:
+  apiKeyValidation: true
+  quotaManagement: true
+  rateLimiting: true
+  piiMasking: true
