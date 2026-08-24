@@ -35,6 +35,10 @@ environment:
   LITELLM_MASTER_KEY: "sk-ironnode-master-key-2024"
   LITELLM_SALT_KEY: "ironnode-salt-key-2024"
   DATABASE_URL: "postgresql://user:password@postgres.platform.svc.cluster.local:5432/litellm"
+  AWS_ACCESS_KEY_ID: "test"
+  AWS_SECRET_ACCESS_KEY: "test"
+  AWS_REGION: "us-east-1"
+  AWS_ENDPOINT_URL: "http://localstack.platform.svc.cluster.local:4566"
 
 modelList:
   - model_name: ollama/llama3

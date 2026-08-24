@@ -22,3 +22,18 @@ output "grafana_endpoint" {
   description = "Grafana dashboard endpoint"
   value       = "http://localhost:3000"
 }
+
+output "s3_bucket_name" {
+  description = "S3 bucket name for model vault"
+  value       = aws_s3_bucket.ironnode_model_vault.id
+}
+
+output "secrets_manager_endpoint" {
+  description = "AWS Secrets Manager endpoint"
+  value       = "http://localhost:4566"
+}
+
+output "localstack_endpoint" {
+  description = "LocalStack endpoint"
+  value       = "http://localhost:4566"
+}

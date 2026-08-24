@@ -22,7 +22,16 @@
 - [x] Autoprovisionar dashboards en Grafana enfocados en métricas de GenAI (TTFT, generación de tokens, VRAM, latencia de inferencia).
 - [x] Configurar pipelines de CI/CD para linting y load testing.
 
-## 🔄 Fase 6: Próximos Pasos y Mejoras
+## ✅ Fase 6: Cloud Mocking con LocalStack - COMPLETADA
+- [x] Configurar provider de AWS en Terraform para redirigir a LocalStack
+- [x] Definir recursos S3 y Secrets Manager mockeados en Terraform
+- [x] Crear Helm Chart personalizado para LocalStack en k8s/platform/localstack/
+- [x] Integrar LocalStack en el patrón App-of-Apps de ArgoCD
+- [x] Configurar LiteLLM para consumir secretos desde LocalStack
+- [x] Actualizar script up.sh con validación de salud de LocalStack
+- [x] Actualizar documentación de control (CONTEXT.md, AVANCES.md, GOTO.md)
+
+## 🔄 Fase 7: Próximos Pasos y Mejoras
 - [ ] Instalar y configurar Redis como deployment independiente en el clúster
 - [ ] Configurar OpenTelemetry Collector para exportar trazas a Jaeger o backend compatible
 - [ ] Implementar autenticación real con gestión de API keys por departamento
@@ -30,3 +39,5 @@
 - [ ] Desarrollar interfaz web de administración (logo y UI pendientes)
 - [ ] Implementar pruebas de integración end-to-end
 - [ ] Documentación de operación y troubleshooting
+- [ ] Configurar backup/restore de secretos desde S3 mockeado
+- [ ] Implementar rotación automática de secretos en Secrets Manager

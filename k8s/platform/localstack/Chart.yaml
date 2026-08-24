@@ -1,0 +1,14 @@
+apiVersion: v2
+name: localstack
+description: LocalStack Helm Chart for IronNode - AWS cloud mock
+type: application
+version: 1.0.0
+appVersion: "latest"
+keywords:
+  - localstack
+  - aws
+  - mock
+  - s3
+  - secrets-manager
+maintainers:
+  - name: IronNode Platform Team

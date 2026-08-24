@@ -36,6 +36,43 @@ if ! command -v docker &> /dev/null; then
 fi
 print_status "✓ Docker found: $(docker --version)"
 
+# Check LocalStack
+print_status "Checking LocalStack..."
+if ! docker ps | grep -q localstack; then
+    print_warning "LocalStack is not running. Starting LocalStack..."
+    docker run -d \
+      --name localstack \
+      -p 4566:4566 \
+      -e SERVICES=s3,secretsmanager \
+      -e DEBUG=0 \
+      -e DATA_DIR=/tmp/localstack/data \
+      -e PERSISTENCE=1 \
+      -v /tmp/localstack:/tmp/localstack \
+      localstack/localstack:latest
+    
+    print_status "Waiting for LocalStack to be ready..."
+    for i in {1..30}; do
+      if curl -s http://localhost:4566/_localstack/health > /dev/null 2>&1; then
+        print_status "✓ LocalStack is ready"
+        break
+      fi
+      if [ $i -eq 30 ]; then
+        print_error "LocalStack failed to start"
+        exit 1
+      fi
+      sleep 2
+    done
+else
+    print_status "✓ LocalStack is running"
+    
+    # Validate LocalStack health
+    if ! curl -s http://localhost:4566/_localstack/health > /dev/null 2>&1; then
+      print_error "LocalStack is not healthy"
+      exit 1
+    fi
+    print_status "✓ LocalStack is healthy"
+fi
+
 # Check k3d
 if ! command -v k3d &> /dev/null; then
     print_warning "k3d not found. Installing k3d..."
@@ -112,6 +149,7 @@ echo "  - AI Gateway (LiteLLM):     http://localhost:4000"
 echo "  - Grafana Dashboard:        http://localhost:3000"
 echo "  - Prometheus:               http://localhost:9090"
 echo "  - ArgoCD UI:                http://localhost:8080"
+echo "  - LocalStack (AWS Mock):    http://localhost:4566"
 echo ""
 echo "🔑 ArgoCD Credentials:"
 echo "  Username: admin"

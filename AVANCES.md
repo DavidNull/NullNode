@@ -32,3 +32,14 @@
 - ✅ Completado: Dashboard de Grafana enfocado en métricas de GenAI (TTFT, tokens/sec, memoria)
 - ✅ Completado: Configuración de CI/CD en `.github/workflows/` (lint-helm, load-test)
 - ✅ Completado: Actualización de README.md con documentación completa
+
+## [2026-08-24] - Fase 6: Cloud Mocking con LocalStack
+- ✅ Completado: Configuración del provider de AWS en Terraform para redirigir a LocalStack (`http://localhost:4566`)
+- ✅ Completado: Definición de recursos AWS mockeados en Terraform:
+  * S3 Bucket: `ironnode-model-vault` (artefactos/prompts/backups)
+  * AWS Secrets Manager: `ironnode/litellm-master-key` (master key de LiteLLM)
+- ✅ Completado: Helm Chart personalizado para LocalStack en `k8s/platform/localstack/`
+- ✅ Completado: Integración de LocalStack en ArgoCD (`k8s/platform/argocd-apps.yaml`)
+- ✅ Completado: Actualización de LiteLLM con credenciales AWS para interactuar con LocalStack
+- ✅ Completado: Script `up.sh` con validación de salud de LocalStack antes de aplicar Terraform
+- ✅ Completado: Actualización de documentación (CONTEXT.md, AVANCES.md, GOTO.md)

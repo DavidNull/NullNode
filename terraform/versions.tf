@@ -6,6 +6,10 @@ terraform {
       source  = "pvotal-tech/k3d"
       version = ">= 0.0.1"
     }
+    aws = {
+      source  = "hashicorp/aws"
+      version = ">= 5.0.0"
+    }
   }
   
   backend "local" {
