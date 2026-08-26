@@ -1,0 +1,8 @@
+apiVersion: v2
+name: redis
+description: >-
+  Redis. Two jobs: LiteLLM's prompt cache and the rate-limit counters shared
+  across gateway replicas. Configured as a cache, not a database.
+type: application
+version: 1.0.0
+appVersion: "7.4"

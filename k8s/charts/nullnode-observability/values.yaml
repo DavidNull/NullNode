@@ -1,0 +1,27 @@
+global:
+  namespace: nullnode-platform
+  observabilityNamespace: nullnode-observability
+  hostSuffix: nullnode.localhost
+  monitoring:
+    enabled: true
+    releaseLabel: kube-prometheus-stack
+
+dashboards:
+  enabled: true
+  # Label the Grafana sidecar looks for.
+  label: grafana_dashboard
+  labelValue: "1"
+  folder: NullNode
+
+alerts:
+  enabled: true
+  # Calibrated for a 3B model on one GPU. Re-baseline before trusting these.
+  ttftP95Seconds: 5
+  errorRatePercent: 5
+  cacheHitRatePercent: 20
+  budgetRemainingPercent: 10
+  gpuMemoryUsedPercent: 90
+
+# DCGM metrics only exist on the GPU profile.
+gpu:
+  enabled: false

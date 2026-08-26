@@ -1,0 +1,3 @@
+{{- if .Values.components.postgres.enabled }}
+{{ include "nullnode.localApp" (dict "root" $ "name" "postgres" "component" .Values.components.postgres) }}
+{{- end }}

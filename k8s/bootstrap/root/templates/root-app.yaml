@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nullnode-root
+  namespace: {{ .Values.argocd.namespace }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: nullnode
+  source:
+    repoURL: {{ .Values.gitops.repoURL | quote }}
+    targetRevision: {{ .Values.gitops.targetRevision | quote }}
+    path: {{ .Values.gitops.path | quote }}
+    helm:
+      valueFiles:
+        - values.yaml
+        - values-{{ .Values.platform.profile }}.yaml
+      parameters:
+        - name: gitops.repoURL
+          value: {{ .Values.gitops.repoURL | quote }}
+        - name: gitops.targetRevision
+          value: {{ .Values.gitops.targetRevision | quote }}
+        - name: global.hostSuffix
+          value: {{ .Values.platform.hostSuffix | quote }}
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: {{ .Values.argocd.namespace }}
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - ApplyOutOfSyncOnly=true
+  revisionHistoryLimit: 5

@@ -1,0 +1,61 @@
+# CPU profile. Works anywhere; inference is slow, so keep models small.
+components:
+  nvidiaDevicePlugin:
+    enabled: false
+
+  dcgmExporter:
+    enabled: false
+
+  ollama:
+    values:
+      gpu:
+        enabled: false
+      resources:
+        requests:
+          cpu: "2"
+          memory: 4Gi
+        limits:
+          memory: 8Gi
+      env:
+        OLLAMA_NUM_PARALLEL: "1"
+        OLLAMA_MAX_LOADED_MODELS: "1"
+        OLLAMA_KEEP_ALIVE: "5m"
+      autoscaling:
+        minReplicas: 1
+        maxReplicas: 3
+      models:
+        - llama3.2:1b
+
+  litellm:
+    values:
+      # Must match ollama.models: the gateway can only route to pulled
+      # weights.
+      models:
+        - name: llama3.2
+          params:
+            model: ollama_chat/llama3.2:1b
+          info:
+            mode: chat
+      router:
+        # CPU inference outlasts the default timeout.
+        timeoutSeconds: 900
+      departments:
+        # Scaled down: a CPU box will not push 400k tokens.
+        - name: engineering
+          maxBudget: 100
+          budgetDuration: 30d
+          tpmLimit: 50000
+          rpmLimit: 120
+          models: ["llama3.2"]
+        - name: data-science
+          maxBudget: 250
+          budgetDuration: 30d
+          tpmLimit: 50000
+          rpmLimit: 120
+          models: ["llama3.2"]
+        - name: support
+          maxBudget: 25
+          budgetDuration: 30d
+          tpmLimit: 20000
+          rpmLimit: 60
+          models: ["llama3.2"]

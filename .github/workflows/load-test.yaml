@@ -1,45 +1,48 @@
-name: Load Test AI Gateway
+name: Load test
 
+# Not part of CI: this needs a converged platform and takes ~10 minutes of
+# sustained inference. Run it against a lab on demand.
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'k8s/platform/litellm/**'
+    inputs:
+      gateway:
+        description: Gateway base URL
+        required: true
+        default: http://gateway.nullnode.localhost:8080
+      model:
+        description: Model to exercise
+        required: true
+        default: llama3.2
+
+permissions:
+  contents: read
 
 jobs:
-  load-test:
-    runs-on: ubuntu-latest
+  k6:
+    name: k6 against an existing gateway
+    runs-on: self-hosted
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install k3d
+      - name: Resolve the gateway key
+        id: key
         run: |
-          curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.6.0 bash
+          key="$(terraform -chdir=infra/terraform/platform-bootstrap \
+                   output -raw litellm_master_key)"
+          echo "::add-mask::${key}"
+          echo "value=${key}" >> "$GITHUB_OUTPUT"
 
-      - name: Create test cluster
-        run: k3d cluster create ironnode-test --port '4000:4000@loadbalancer' --port '3000:3000@loadbalancer'
+      - uses: grafana/setup-k6-action@v1
 
-      - name: Install Helm
-        uses: azure/setup-helm@v4
-        with:
-          version: 'v3.14.0'
-
-      - name: Deploy LiteLLM
+      - name: Run the load profile
         run: |
-          helm install litellm k8s/platform/litellm --set service.type=LoadBalancer
+          k6 run tests/load/chat-completions.js \
+            -e GATEWAY='${{ inputs.gateway }}' \
+            -e MODEL='${{ inputs.model }}' \
+            -e API_KEY='${{ steps.key.outputs.value }}'
 
-      - name: Wait for deployment
-        run: kubectl wait --for=condition=available --timeout=300s deployment/litellm
-
-      - name: Run load test
-        run: |
-          # Install Apache Bench
-          sudo apt-get update && sudo apt-get install -y apache2-utils
-          
-          # Run load test against the gateway
-          ab -n 1000 -c 10 -p test-payload.json -T application/json http://localhost:4000/v1/chat/completions
-
-      - name: Cleanup
+      - uses: actions/upload-artifact@v4
         if: always()
-        run: k3d cluster delete ironnode-test
+        with:
+          name: k6-summary
+          path: k6-summary.json

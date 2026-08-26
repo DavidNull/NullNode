@@ -1,0 +1,45 @@
+{{- if .Values.autoscaling.enabled }}
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: {{ include "ollama.fullname" . }}
+  labels:
+    {{- include "ollama.labels" . | nindent 4 }}
+  annotations:
+    # Deleting the ScaledObject otherwise pins the last replica count.
+    autoscaling.keda.sh/paused: "false"
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: StatefulSet
+    name: {{ include "ollama.fullname" . }}
+  minReplicaCount: {{ if .Values.autoscaling.scaleToZero }}0{{ else }}{{ .Values.autoscaling.minReplicas }}{{ end }}
+  maxReplicaCount: {{ .Values.autoscaling.maxReplicas }}
+  pollingInterval: {{ .Values.autoscaling.pollingInterval }}
+  cooldownPeriod: {{ .Values.autoscaling.cooldownPeriod }}
+  advanced:
+    restoreToOriginalReplicaCount: true
+    horizontalPodAutoscalerConfig:
+      behavior:
+        scaleDown:
+          stabilizationWindowSeconds: {{ .Values.autoscaling.scaleDownStabilizationSeconds }}
+          policies:
+            - type: Pods
+              value: 1
+              periodSeconds: 300
+        scaleUp:
+          stabilizationWindowSeconds: 0
+          policies:
+            - type: Pods
+              value: 1
+              periodSeconds: 60
+  triggers:
+    - type: prometheus
+      metricType: AverageValue
+      metadata:
+        serverAddress: {{ .Values.autoscaling.prometheus.serverAddress | quote }}
+        metricName: ollama_gateway_request_rate
+        query: {{ .Values.autoscaling.prometheus.query | trim | quote }}
+        threshold: {{ .Values.autoscaling.prometheus.threshold | quote }}
+        activationThreshold: {{ .Values.autoscaling.prometheus.activationThreshold | quote }}
+{{- end }}

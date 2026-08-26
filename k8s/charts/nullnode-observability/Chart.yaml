@@ -1,0 +1,9 @@
+apiVersion: v2
+name: nullnode-observability
+description: >-
+  Grafana dashboards and Prometheus rules for the GenAI-specific signals: TTFT,
+  tokens/sec, cache hit rate, per-team spend and budget burn. The plumbing
+  comes from kube-prometheus-stack and the OTel collector.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"

@@ -1,0 +1,32 @@
+# Upstream KEDA values.
+resources:
+  operator:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+  metricServer:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+# KEDA's own metrics.
+prometheus:
+  metricServer:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+  operator:
+    enabled: true
+    serviceMonitor:
+      enabled: true
+
+# INFO keeps the "scaled X from N to M" lines, which is what you need when
+# debugging a scaling decision.
+logging:
+  operator:
+    level: info
+    format: console

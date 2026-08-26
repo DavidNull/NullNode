@@ -1,0 +1,21 @@
+# Upstream dcgm-exporter values (GPU profile only). The only source of real
+# VRAM numbers: cAdvisor reports host RAM, not what fits on the card.
+runtimeClassName: nvidia
+
+serviceMonitor:
+  enabled: true
+  interval: 15s
+  additionalLabels:
+    release: kube-prometheus-stack
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    memory: 256Mi
+
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule

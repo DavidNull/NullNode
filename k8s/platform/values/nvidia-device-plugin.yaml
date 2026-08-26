@@ -1,0 +1,29 @@
+# Upstream nvidia-device-plugin values (GPU profile only).
+# Must run under the "nvidia" runtime the CUDA k3s image registers, or it
+# cannot see the device.
+runtimeClassName: nvidia
+
+gfd:
+  # Feature discovery is overkill for one GPU.
+  enabled: false
+
+# Exclusive access: one pod gets the GPU. Time-slicing is the knob for two
+# replicas on one card, at the cost of shared VRAM.
+config:
+  map:
+    default: |-
+      version: v1
+      flags:
+        migStrategy: none
+
+tolerations:
+  - key: nvidia.com/gpu
+    operator: Exists
+    effect: NoSchedule
+
+resources:
+  requests:
+    cpu: 20m
+    memory: 32Mi
+  limits:
+    memory: 128Mi

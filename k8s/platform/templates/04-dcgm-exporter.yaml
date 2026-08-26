@@ -1,0 +1,3 @@
+{{- if .Values.components.dcgmExporter.enabled }}
+{{ include "nullnode.upstreamApp" (dict "root" $ "name" "dcgm-exporter" "component" .Values.components.dcgmExporter) }}
+{{- end }}

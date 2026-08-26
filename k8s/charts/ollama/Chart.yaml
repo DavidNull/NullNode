@@ -1,0 +1,9 @@
+apiVersion: v2
+name: ollama
+description: >-
+  Ollama worker pool. StatefulSet so each replica owns its model cache
+  (local-path has no ReadWriteMany), with weights pulled by an init container
+  instead of on first request.
+type: application
+version: 1.0.0
+appVersion: "0.5.7"

@@ -1,0 +1,141 @@
+# NullNode platform - shared defaults.
+# Overridden by values-gpu.yaml / values-cpu.yaml.
+
+gitops:
+  repoURL: https://github.com/DavidNull/NullNode.git
+  targetRevision: main
+
+argocd:
+  namespace: argocd
+
+# Injected into every child chart as read-only environment context.
+global:
+  namespace: nullnode-platform
+  observabilityNamespace: nullnode-observability
+
+  # See docs/adr/0003-single-entrypoint.md
+  hostSuffix: nullnode.localhost
+  ingressClassName: traefik
+
+  storageClass: local-path
+
+  # The mocked cloud is on the host, reached via the DNS entry k3d adds
+  # to CoreDNS.
+  aws:
+    region: eu-west-1
+    endpoint: http://host.k3d.internal:4566
+    vaultBucket: nullnode-model-vault
+    credentialsSecret: nullnode-aws-credentials
+    litellmSecret: nullnode-litellm-credentials
+    departmentKeysSecretId: nullnode/litellm/department-keys
+
+  monitoring:
+    enabled: true
+    # Label kube-prometheus-stack selects ServiceMonitors on.
+    releaseLabel: kube-prometheus-stack
+
+  otel:
+    enabled: true
+    endpoint: http://otel-collector-opentelemetry-collector.nullnode-observability.svc.cluster.local:4317
+
+# Components. Waves matter: CRDs, datastores, model runtime, gateway.
+components:
+
+  # --- wave -20: device plugins / node level ------------------------------
+  nvidiaDevicePlugin:
+    enabled: false # flipped on by values-gpu.yaml
+    wave: "-20"
+    repoURL: https://nvidia.github.io/k8s-device-plugin
+    chart: nvidia-device-plugin
+    version: "0.17.0"
+    namespace: kube-system
+    valuesFile: nvidia-device-plugin.yaml
+
+  # --- wave -10: operators and CRDs ---------------------------------------
+  keda:
+    enabled: true
+    wave: "-10"
+    repoURL: https://kedacore.github.io/charts
+    chart: keda
+    version: "2.15.2"
+    namespace: keda
+    valuesFile: keda.yaml
+    extraSyncOptions:
+      - SkipDryRunOnMissingResource=true
+
+  observabilityStack:
+    enabled: true
+    wave: "-10"
+    repoURL: https://prometheus-community.github.io/helm-charts
+    chart: kube-prometheus-stack
+    version: "65.5.1"
+    namespace: nullnode-observability
+    valuesFile: kube-prometheus-stack.yaml
+    extraSyncOptions:
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+
+  # --- wave 0: datastores --------------------------------------------------
+  postgres:
+    enabled: true
+    wave: "0"
+    values:
+      persistence:
+        size: 8Gi
+
+  redis:
+    enabled: true
+    wave: "0"
+    values:
+      # Cache, not a database.
+      config:
+        maxmemory: 512mb
+        maxmemoryPolicy: allkeys-lru
+        appendonly: "no"
+
+  # --- wave 5: telemetry pipeline -----------------------------------------
+  dcgmExporter:
+    # Source of the DCGM_* series the inference dashboard plots.
+    enabled: false
+    wave: "5"
+    repoURL: https://nvidia.github.io/dcgm-exporter/helm-charts
+    chart: dcgm-exporter
+    version: "3.6.1"
+    namespace: nullnode-observability
+    valuesFile: dcgm-exporter.yaml
+
+  otelCollector:
+    enabled: true
+    wave: "5"
+    repoURL: https://open-telemetry.github.io/opentelemetry-helm-charts
+    chart: opentelemetry-collector
+    version: "0.108.1"
+    namespace: nullnode-observability
+    valuesFile: otel-collector.yaml
+
+  # --- wave 10: model runtime and guardrails ------------------------------
+  ollama:
+    enabled: true
+    wave: "10"
+    values: {}
+
+  presidio:
+    # PII detection for the guardrail. ~2 GiB of extra RAM, so off by
+    # default.
+    enabled: false
+    wave: "10"
+    values: {}
+
+  # --- wave 20: the gateway -----------------------------------------------
+  litellm:
+    enabled: true
+    wave: "20"
+    values: {}
+
+  # --- wave 30: dashboards, alerts, scaling policy ------------------------
+  observability:
+    enabled: true
+    wave: "30"
+    chart: nullnode-observability
+    namespace: nullnode-observability
+    values: {}

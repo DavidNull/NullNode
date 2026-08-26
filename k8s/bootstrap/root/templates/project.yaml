@@ -1,0 +1,35 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: nullnode
+  namespace: {{ .Values.argocd.namespace }}
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  description: NullNode - local LLMOps platform
+  sourceRepos:
+    - {{ .Values.gitops.repoURL | quote }}
+    - https://prometheus-community.github.io/helm-charts
+    - https://kedacore.github.io/charts
+    - https://open-telemetry.github.io/opentelemetry-helm-charts
+    - https://nvidia.github.io/k8s-device-plugin
+    - https://nvidia.github.io/dcgm-exporter/helm-charts
+  destinations:
+    - namespace: nullnode-platform
+      server: https://kubernetes.default.svc
+    - namespace: nullnode-observability
+      server: https://kubernetes.default.svc
+    - namespace: keda
+      server: https://kubernetes.default.svc
+    - namespace: kube-system
+      server: https://kubernetes.default.svc
+  # The platform installs CRDs (KEDA, Prometheus Operator), so cluster-scoped
+  # resources have to be allowed.
+  clusterResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  namespaceResourceWhitelist:
+    - group: '*'
+      kind: '*'
+  orphanedResources:
+    warn: true

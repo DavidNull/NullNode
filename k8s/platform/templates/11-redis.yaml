@@ -1,0 +1,3 @@
+{{- if .Values.components.redis.enabled }}
+{{ include "nullnode.localApp" (dict "root" $ "name" "redis" "component" .Values.components.redis) }}
+{{- end }}

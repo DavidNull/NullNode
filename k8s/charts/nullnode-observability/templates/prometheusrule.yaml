@@ -1,0 +1,161 @@
+{{- if .Values.alerts.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: {{ include "nullnode-observability.fullname" . }}
+  labels:
+    {{- include "nullnode-observability.labels" . | nindent 4 }}
+    release: {{ .Values.global.monitoring.releaseLabel }}
+spec:
+  groups:
+    # Recording rules: one definition per signal, used by both the panels and
+    # the alerts, so a graph cannot disagree with a page.
+    - name: nullnode.recording
+      interval: 30s
+      rules:
+        - record: nullnode:gateway_requests:rate5m
+          expr: sum(rate(litellm_proxy_total_requests_metric_total[5m]))
+
+        - record: nullnode:gateway_errors:ratio5m
+          expr: >-
+            sum(rate(litellm_proxy_failed_requests_metric_total[5m]))
+            / clamp_min(sum(rate(litellm_proxy_total_requests_metric_total[5m])), 1e-9)
+
+        - record: nullnode:ttft_seconds:p95
+          expr: >-
+            histogram_quantile(0.95, sum by (le)
+              (rate(litellm_llm_api_time_to_first_token_metric_bucket[5m])))
+
+        - record: nullnode:output_tokens:rate5m
+          expr: sum(rate(litellm_output_tokens_metric_total[5m]))
+
+        - record: nullnode:cache_hit:ratio10m
+          expr: >-
+            sum(rate(redis_keyspace_hits_total[10m]))
+            / clamp_min(sum(rate(redis_keyspace_hits_total[10m]))
+                        + sum(rate(redis_keyspace_misses_total[10m])), 1e-9)
+
+    # Alerts. Each one has a runbook entry - see docs/ops/RUNBOOK.md
+    - name: nullnode.gateway
+      rules:
+        - alert: NullNodeGatewayDown
+          expr: |
+            absent(up{job=~".*litellm.*"} == 1)
+          for: 5m
+          labels:
+            severity: critical
+            component: gateway
+          annotations:
+            summary: "AI gateway is not being scraped or is down"
+            description: >-
+              No healthy LiteLLM target for 5 minutes. Every call goes through
+              it: this is a full outage.
+            runbook: "docs/ops/RUNBOOK.md#nullnodegatewaydown"
+
+        - alert: NullNodeGatewayHighErrorRate
+          expr: nullnode:gateway_errors:ratio5m * 100 > {{ .Values.alerts.errorRatePercent }}
+          for: 10m
+          labels:
+            severity: warning
+            component: gateway
+          annotations:
+            summary: "Gateway error rate above {{ .Values.alerts.errorRatePercent }}%"
+            description: >-
+              Split by status_code first. 429 is the governance layer working;
+              5xx is the worker pool failing.
+            runbook: "docs/ops/RUNBOOK.md#nullnodegatewayhigherrorrate"
+
+        - alert: NullNodeTimeToFirstTokenDegraded
+          expr: nullnode:ttft_seconds:p95 > {{ .Values.alerts.ttftP95Seconds }}
+          for: 10m
+          labels:
+            severity: warning
+            component: inference
+          annotations:
+            summary: "TTFT p95 above {{ .Values.alerts.ttftP95Seconds }}s"
+            description: >-
+              Likely causes in order: the model was evicted from VRAM
+              (OLLAMA_KEEP_ALIVE), more concurrency than OLLAMA_NUM_PARALLEL,
+              or the pool scaled down mid-traffic.
+            runbook: "docs/ops/RUNBOOK.md#nullnodetimetofirsttokendegraded"
+
+        - alert: NullNodeCacheHitRateLow
+          expr: nullnode:cache_hit:ratio10m * 100 < {{ .Values.alerts.cacheHitRatePercent }}
+          for: 30m
+          labels:
+            severity: info
+            component: cache
+          annotations:
+            summary: "Prompt cache hit rate below {{ .Values.alerts.cacheHitRatePercent }}%"
+            description: >-
+              Not a fault. Either the workload is diverse, the TTL is short, or
+              Redis is evicting under maxmemory. Check evictions first.
+            runbook: "docs/ops/RUNBOOK.md#nullnodecachehitratelow"
+
+    - name: nullnode.governance
+      rules:
+        - alert: NullNodeTeamBudgetNearlyExhausted
+          expr: |
+            litellm_remaining_team_budget_metric
+              / clamp_min(litellm_team_max_budget_metric, 1e-9) * 100
+              < {{ .Values.alerts.budgetRemainingPercent }}
+          for: 5m
+          labels:
+            severity: warning
+            component: governance
+          annotations:
+            summary: "Team {{`{{ $labels.team_alias }}`}} has under {{ .Values.alerts.budgetRemainingPercent }}% budget left"
+            description: >-
+              At zero the gateway returns 429 to that team's keys. Raise the
+              budget or let it throttle.
+            runbook: "docs/ops/RUNBOOK.md#nullnodeteambudgetnearlyexhausted"
+
+    - name: nullnode.inference
+      rules:
+        - alert: NullNodeWorkerPoolEmpty
+          expr: |
+            kube_statefulset_status_replicas_ready{namespace="{{ .Values.global.namespace }}", statefulset="ollama"} == 0
+            and on() nullnode:gateway_requests:rate5m > 0
+          for: 5m
+          labels:
+            severity: critical
+            component: inference
+          annotations:
+            summary: "Traffic arriving with zero ready inference replicas"
+            description: >-
+              Either a cold start that never finished or a pod Pending because
+              the GPU is claimed. Describe the pod before restarting it.
+            runbook: "docs/ops/RUNBOOK.md#nullnodeworkerpoolempty"
+
+        - alert: NullNodeWorkerPoolCrashLooping
+          expr: |
+            increase(kube_pod_container_status_restarts_total{namespace="{{ .Values.global.namespace }}", container="ollama"}[15m]) > 2
+          labels:
+            severity: warning
+            component: inference
+          annotations:
+            summary: "Ollama restarting repeatedly"
+            description: >-
+              Usually the memory limit below the model's working set. Check for
+              OOMKilled in lastState.
+            runbook: "docs/ops/RUNBOOK.md#nullnodeworkerpoolcrashlooping"
+
+    {{- if .Values.gpu.enabled }}
+    - name: nullnode.gpu
+      rules:
+        - alert: NullNodeGpuMemoryHigh
+          expr: |
+            DCGM_FI_DEV_FB_USED / clamp_min(DCGM_FI_DEV_FB_USED + DCGM_FI_DEV_FB_FREE, 1e-9) * 100
+              > {{ .Values.alerts.gpuMemoryUsedPercent }}
+          for: 10m
+          labels:
+            severity: warning
+            component: gpu
+          annotations:
+            summary: "VRAM above {{ .Values.alerts.gpuMemoryUsedPercent }}% on GPU {{`{{ $labels.gpu }}`}}"
+            description: >-
+              The next model load will fail or evict a resident model. Lower
+              OLLAMA_MAX_LOADED_MODELS or use smaller quantisations.
+            runbook: "docs/ops/RUNBOOK.md#nullnodegpumemoryhigh"
+    {{- end }}
+{{- end }}

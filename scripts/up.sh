@@ -1,163 +1,216 @@
-#!/bin/bash
-set -e
+#!/usr/bin/env bash
+#
+# Bring NullNode up. Idempotent, and each phase can run on its own.
+#
+#   ./scripts/up.sh                       # everything, GPU profile
+#   PROFILE=cpu ./scripts/up.sh           # everything, CPU profile
+#   ./scripts/up.sh --only cloud-mock     # single phase
+#   ./scripts/up.sh --from platform       # this phase onwards
+#   ./scripts/up.sh --no-wait             # do not block on ArgoCD syncing
+#
+source "$(dirname "${BASH_SOURCE[0]}")/lib/common.sh"
 
-# IronNode Platform Bootstrap Script
-# This script provisions the local K3s cluster and deploys the complete platform
+PHASES=(preflight cluster cloud-mock platform verify)
+FROM=""
+ONLY=""
+WAIT=true
 
-echo "🚀 IronNode Platform Bootstrap"
-echo "================================"
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --only)    ONLY="${2:-}"; shift 2 ;;
+    --from)    FROM="${2:-}"; shift 2 ;;
+    --no-wait) WAIT=false; shift ;;
+    -h|--help) sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+    *)         die "unknown flag: $1 (try --help)" ;;
+  esac
+done
 
-# Color codes for output
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
-
-# Function to print colored output
-print_status() {
-    echo -e "${GREEN}[INFO]${NC} $1"
+should_run() {
+  local phase="$1"
+  if [[ -n "$ONLY" ]]; then
+    [[ "$phase" == "$ONLY" ]]
+    return
+  fi
+  if [[ -n "$FROM" ]]; then
+    local seen=false p
+    for p in "${PHASES[@]}"; do
+      [[ "$p" == "$FROM" ]] && seen=true
+      [[ "$p" == "$phase" ]] && { [[ "$seen" == true ]]; return; }
+    done
+    return 1
+  fi
+  return 0
 }
 
-print_warning() {
-    echo -e "${YELLOW}[WARN]${NC} $1"
-}
+# ---------------------------------------------------------------------------
+phase_preflight() {
+  phase "Preflight"
 
-print_error() {
-    echo -e "${RED}[ERROR]${NC} $1"
-}
+  local missing=0
+  require_tool docker "https://docs.docker.com/engine/install/" || missing=1
+  require_tool k3d    "https://k3d.io/#installation" || missing=1
+  require_tool kubectl "https://kubernetes.io/docs/tasks/tools/" || missing=1
+  require_tool helm   "https://helm.sh/docs/intro/install/" || missing=1
+  require_tool terraform "https://developer.hashicorp.com/terraform/install" || missing=1
+  require_tool curl "" || missing=1
+  ((missing == 0)) || die "install the missing tools and re-run"
 
-# Check prerequisites
-print_status "Checking prerequisites..."
+  docker info >/dev/null 2>&1 || die "the Docker daemon is not reachable"
+  ok "docker daemon reachable"
 
-# Check Docker
-if ! command -v docker &> /dev/null; then
-    print_error "Docker is not installed. Please install Docker first."
-    exit 1
-fi
-print_status "✓ Docker found: $(docker --version)"
+  local k3d_version
+  k3d_version="$(k3d version | awk '/k3d version/ {gsub(/^v/, "", $3); print $3}')"
+  if [[ -n "$k3d_version" ]] && ! version_at_least "$k3d_version" "5.6.0"; then
+    die "k3d ${k3d_version} is too old; the config schema used here needs >= 5.6.0"
+  fi
+  ok "k3d ${k3d_version:-unknown}"
 
-# Check LocalStack
-print_status "Checking LocalStack..."
-if ! docker ps | grep -q localstack; then
-    print_warning "LocalStack is not running. Starting LocalStack..."
-    docker run -d \
-      --name localstack \
-      -p 4566:4566 \
-      -e SERVICES=s3,secretsmanager \
-      -e DEBUG=0 \
-      -e DATA_DIR=/tmp/localstack/data \
-      -e PERSISTENCE=1 \
-      -v /tmp/localstack:/tmp/localstack \
-      localstack/localstack:latest
-    
-    print_status "Waiting for LocalStack to be ready..."
-    for i in {1..30}; do
-      if curl -s http://localhost:4566/_localstack/health > /dev/null 2>&1; then
-        print_status "✓ LocalStack is ready"
-        break
-      fi
-      if [ $i -eq 30 ]; then
-        print_error "LocalStack failed to start"
+  local tf_version
+  tf_version="$(terraform version -json 2>/dev/null | sed -n 's/.*"terraform_version": *"\([^"]*\)".*/\1/p' | head -n1)"
+  if [[ -n "$tf_version" ]] && ! version_at_least "$tf_version" "1.6.0"; then
+    die "terraform ${tf_version} is too old; needs >= 1.6.0"
+  fi
+  ok "terraform ${tf_version:-unknown}"
+
+  case "$PROFILE" in
+    gpu)
+      if ! docker run --rm --gpus all nvidia/cuda:12.6.2-base-ubuntu24.04 \
+             nvidia-smi >/dev/null 2>&1; then
+        err "the GPU profile is selected but Docker cannot reach an NVIDIA GPU"
+        hint "checklist:"
+        hint "  1. NVIDIA driver installed on the host (on Windows, not in WSL)"
+        hint "  2. nvidia-container-toolkit installed inside the WSL distro"
+        hint "  3. Docker restarted after step 2"
+        hint "no GPU available? run with PROFILE=cpu instead"
         exit 1
       fi
-      sleep 2
-    done
-else
-    print_status "✓ LocalStack is running"
-    
-    # Validate LocalStack health
-    if ! curl -s http://localhost:4566/_localstack/health > /dev/null 2>&1; then
-      print_error "LocalStack is not healthy"
-      exit 1
-    fi
-    print_status "✓ LocalStack is healthy"
-fi
+      ok "GPU visible from Docker"
 
-# Check k3d
-if ! command -v k3d &> /dev/null; then
-    print_warning "k3d not found. Installing k3d..."
-    curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.6.0 bash
-fi
-print_status "✓ k3d found: $(k3d version)"
+      if ! docker image inspect nullnode/k3s-cuda:v1.31.2-k3s1 >/dev/null 2>&1; then
+        err "the CUDA-enabled k3s image is missing"
+        hint "build it once with: make k3s-cuda-image  (takes a few minutes)"
+        exit 1
+      fi
+      ok "CUDA k3s image present"
+      ;;
+    cpu)
+      warn "CPU profile: inference will be slow. Keep the models small."
+      ;;
+    *)
+      die "PROFILE must be gpu or cpu (got: ${PROFILE})"
+      ;;
+  esac
+}
 
-# Check kubectl
-if ! command -v kubectl &> /dev/null; then
-    print_error "kubectl is not installed. Please install kubectl first."
-    exit 1
-fi
-print_status "✓ kubectl found: $(kubectl version --client --short)"
+# ---------------------------------------------------------------------------
+phase_cluster() {
+  phase "Cluster"
 
-# Check Terraform
-if ! command -v terraform &> /dev/null; then
-    print_error "Terraform is not installed. Please install Terraform first."
-    exit 1
-fi
-print_status "✓ Terraform found: $(terraform --version | head -n1)"
+  if cluster_exists; then
+    ok "k3d cluster '${CLUSTER_NAME}' already exists"
+  else
+    log "creating k3d cluster from infra/k3d/${CLUSTER_NAME}-${PROFILE}.yaml"
+    k3d cluster create --config "${REPO_ROOT}/infra/k3d/${CLUSTER_NAME}-${PROFILE}.yaml"
+    ok "cluster created"
+  fi
 
-# Check Helm
-if ! command -v helm &> /dev/null; then
-    print_error "Helm is not installed. Please install Helm first."
-    exit 1
-fi
-print_status "✓ Helm found: $(helm version --short)"
+  kubectl config use-context "$KUBE_CONTEXT" >/dev/null
+  wait_for "nodes to be Ready" 60 5 \
+    kube wait --for=condition=Ready nodes --all --timeout=10s
 
-# Navigate to terraform directory
-cd "$(dirname "$0")/../terraform"
+  # k3s installs Traefik asynchronously; the Ingresses are dead until it
+  # exists.
+  wait_for "traefik to be available" 60 5 \
+    kube -n kube-system rollout status deployment/traefik --timeout=10s
+}
 
-# Initialize Terraform
-print_status "Initializing Terraform..."
-terraform init
+# ---------------------------------------------------------------------------
+phase_cloud_mock() {
+  phase "Cloud mock (LocalStack + S3 + Secrets Manager)"
 
-# Apply Terraform configuration
-print_status "Provisioning K3d cluster with Terraform..."
-terraform apply -auto-approve
+  log "terraform init"
+  tf cloud-mock init -input=false -upgrade >/dev/null
 
-# Get kubeconfig
-print_status "Configuring kubectl..."
-export KUBECONFIG=$(terraform output -raw kubeconfig_path)
+  log "terraform apply"
+  tf cloud-mock apply -input=false -auto-approve \
+    -var "aws_region=${AWS_REGION:-eu-west-1}"
 
-# Wait for cluster to be ready
-print_status "Waiting for cluster to be ready..."
-kubectl wait --for=condition=ready nodes --all --timeout=300s
+  localstack_healthy \
+    && ok "LocalStack answering at ${LOCALSTACK_ENDPOINT}" \
+    || die "LocalStack applied but not healthy"
 
-# Bootstrap ArgoCD
-print_status "Bootstrapping ArgoCD..."
-cd "$(dirname "$0")/../k8s/bootstrap/argo-cd"
-kubectl apply -f kustomization.yaml
+  local bucket
+  bucket="$(tf cloud-mock output -raw vault_bucket)"
+  ok "vault bucket: ${bucket}"
+}
 
-# Wait for ArgoCD to be ready
-print_status "Waiting for ArgoCD to be ready..."
-kubectl wait --for=condition=available -n argocd deployment/argocd-server --timeout=300s
+# ---------------------------------------------------------------------------
+phase_platform() {
+  phase "Platform bootstrap (ArgoCD + GitOps root)"
 
-# Deploy platform applications
-print_status "Deploying platform applications..."
-cd "$(dirname "$0")/../k8s/platform"
-kubectl apply -f argocd-apps.yaml
+  localstack_healthy \
+    || die "LocalStack is not up; run './scripts/up.sh --only cloud-mock' first"
 
-# Wait for applications to sync
-print_status "Waiting for applications to sync..."
-sleep 30
+  log "terraform init"
+  tf platform-bootstrap init -input=false -upgrade >/dev/null
 
-# Print endpoints
-echo ""
-echo "================================"
-echo -e "${GREEN}✓ IronNode Platform is ready!${NC}"
-echo "================================"
-echo ""
-echo "🎯 Available Endpoints:"
-echo "  - AI Gateway (LiteLLM):     http://localhost:4000"
-echo "  - Grafana Dashboard:        http://localhost:3000"
-echo "  - Prometheus:               http://localhost:9090"
-echo "  - ArgoCD UI:                http://localhost:8080"
-echo "  - LocalStack (AWS Mock):    http://localhost:4566"
-echo ""
-echo "🔑 ArgoCD Credentials:"
-echo "  Username: admin"
-echo "  Password: $(kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d)"
-echo ""
-echo "📊 To view all pods:"
-echo "  kubectl get pods -A"
-echo ""
-echo "📝 To view logs:"
-echo "  kubectl logs -f deployment/litellm -n platform"
-echo ""
+  log "terraform apply"
+  tf platform-bootstrap apply -input=false -auto-approve \
+    -var "hardware_profile=${PROFILE}" \
+    -var "host_suffix=${HOST_SUFFIX}" \
+    -var "kube_context=${KUBE_CONTEXT}"
+
+  ok "ArgoCD installed and the root Application is registered"
+}
+
+# ---------------------------------------------------------------------------
+phase_verify() {
+  phase "Convergence"
+
+  if [[ "$WAIT" != true ]]; then
+    warn "--no-wait given; skipping convergence checks"
+    return 0
+  fi
+
+  # The first sync pulls several GiB of images and model weights.
+  log "waiting for ArgoCD to reconcile (first run pulls images and models,"
+  log "so 10-20 minutes is normal - ^C is safe, sync continues in-cluster)"
+
+  wait_for "argocd applications to be registered" 60 5 \
+    kube -n argocd get application nullnode-root
+
+  local app
+  for app in postgres redis ollama litellm; do
+    wait_for "application/${app} to exist" 60 10 \
+      kube -n argocd get "application/${app}"
+  done
+
+  wait_for "postgres to be ready" 60 10 \
+    kube -n nullnode-platform rollout status statefulset/postgres --timeout=10s
+  wait_for "redis to be ready" 60 10 \
+    kube -n nullnode-platform rollout status statefulset/redis --timeout=10s
+  wait_for "ollama to pull models and start" 180 10 \
+    kube -n nullnode-platform rollout status statefulset/ollama --timeout=10s
+  wait_for "the gateway to be ready" 120 10 \
+    kube -n nullnode-platform rollout status deployment/litellm --timeout=10s
+
+  ok "platform converged"
+}
+
+# ---------------------------------------------------------------------------
+main() {
+  printf '%sNullNode%s - local LLMOps platform (profile: %s)\n' \
+    "$C_BLUE" "$C_RESET" "$PROFILE"
+
+  # `if`, not `&&`: a false should_run in an && list trips set -e.
+  if should_run preflight;  then phase_preflight;  fi
+  if should_run cluster;    then phase_cluster;    fi
+  if should_run cloud-mock; then phase_cloud_mock; fi
+  if should_run platform;   then phase_platform;   fi
+  if should_run verify;     then phase_verify;     fi
+
+  printf '\n'
+  "${REPO_ROOT}/scripts/status.sh" || true
+}
+
+main "$@"

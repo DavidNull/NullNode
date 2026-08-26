@@ -42,3 +42,17 @@ secrets/
 
 # OS
 Thumbs.db
+
+# Terraform lock files ARE committed on purpose - provider drift between
+# machines is exactly what they prevent. Only the local state is ignored.
+!.terraform.lock.hcl
+
+# Load test output
+k6-summary.json
+
+# Python
+__pycache__/
+*.pyc
+
+# Rendered manifests from local debugging
+/build/
