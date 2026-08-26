@@ -1,0 +1,20 @@
+# Only applied to plain YAML - Helm templates are not YAML until rendered, so
+# they are validated with `helm template` instead (see scripts/validate.sh).
+extends: default
+
+rules:
+  line-length:
+    max: 120
+    level: warning
+  comments:
+    min-spaces-from-content: 1
+  truthy:
+    # GitHub Actions' `on:` key.
+    allowed-values: ["true", "false", "on", "off"]
+  document-start: disable
+  indentation:
+    spaces: 2
+    indent-sequences: consistent
+
+ignore: |
+  **/templates/**

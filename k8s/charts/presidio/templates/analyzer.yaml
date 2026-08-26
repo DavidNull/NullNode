@@ -1,0 +1,67 @@
+{{- range $component := list "analyzer" "anonymizer" }}
+{{- $cfg := index $.Values $component }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: presidio-{{ $component }}
+  labels:
+    {{- include "presidio.labels" $ | nindent 4 }}
+    nullnode.io/component: guardrail
+    presidio.io/role: {{ $component }}
+spec:
+  replicas: {{ $cfg.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "presidio.selectorLabels" $ | nindent 6 }}
+      presidio.io/role: {{ $component }}
+  template:
+    metadata:
+      labels:
+        {{- include "presidio.labels" $ | nindent 8 }}
+        nullnode.io/component: guardrail
+        presidio.io/role: {{ $component }}
+    spec:
+      securityContext:
+        {{- toYaml $.Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: presidio-{{ $component }}
+          image: "{{ $cfg.image.repository }}:{{ $cfg.image.tag }}"
+          securityContext:
+            {{- toYaml $.Values.containerSecurityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ $cfg.port }}
+          # Loads an NLP model before serving; keep that out of the liveness
+          # budget.
+          startupProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            periodSeconds: 15
+          resources:
+            {{- toYaml $cfg.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: presidio-{{ $component }}
+  labels:
+    {{- include "presidio.labels" $ | nindent 4 }}
+    presidio.io/role: {{ $component }}
+spec:
+  type: ClusterIP
+  ports:
+    - name: http
+      port: {{ $cfg.port }}
+      targetPort: http
+  selector:
+    {{- include "presidio.selectorLabels" $ | nindent 4 }}
+    presidio.io/role: {{ $component }}
+{{- end }}

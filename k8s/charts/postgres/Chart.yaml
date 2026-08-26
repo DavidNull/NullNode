@@ -1,0 +1,8 @@
+apiVersion: v2
+name: postgres
+description: >-
+  PostgreSQL for LiteLLM: virtual keys, teams, per-department budgets and spend
+  history. Without it the gateway is a proxy with one shared key.
+type: application
+version: 1.0.0
+appVersion: "16.4"

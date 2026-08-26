@@ -1,0 +1,9 @@
+apiVersion: v2
+name: presidio
+description: >-
+  Presidio analyzer + anonymizer, behind the gateway's PII guardrail. The
+  analyzer finds entities, the anonymizer rewrites them; LiteLLM calls both on
+  every request when the guardrail is on.
+type: application
+version: 1.0.0
+appVersion: "2.2.355"

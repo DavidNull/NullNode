@@ -1,0 +1,3 @@
+{{- if .Values.components.presidio.enabled }}
+{{ include "nullnode.localApp" (dict "root" $ "name" "presidio" "component" .Values.components.presidio) }}
+{{- end }}

@@ -1,0 +1,98 @@
+global:
+  namespace: nullnode-platform
+  hostSuffix: nullnode.localhost
+  storageClass: local-path
+  observabilityNamespace: nullnode-observability
+  monitoring:
+    enabled: true
+    releaseLabel: kube-prometheus-stack
+
+image:
+  repository: ollama/ollama
+  tag: "0.5.7"
+  pullPolicy: IfNotPresent
+
+service:
+  port: 11434
+
+# Pulled by the init container before the server accepts traffic.
+models:
+  - llama3.2:3b
+
+gpu:
+  enabled: true
+  count: 1
+  # Registered by the CUDA k3s image; required to see the device.
+  runtimeClassName: nvidia
+
+env:
+  # Concurrent requests per replica. With one GPU this, not replica count,
+  # is the concurrency lever.
+  OLLAMA_NUM_PARALLEL: "4"
+  OLLAMA_MAX_LOADED_MODELS: "2"
+  # How long a model stays in VRAM after the last request.
+  OLLAMA_KEEP_ALIVE: "10m"
+  OLLAMA_FLASH_ATTENTION: "1"
+
+persistence:
+  enabled: true
+  # llama3.2:3b is ~2 GiB, a 7B coder model ~5 GiB.
+  size: 40Gi
+
+resources:
+  requests:
+    cpu: "2"
+    memory: 6Gi
+  limits:
+    memory: 16Gi
+
+autoscaling:
+  # KEDA, not HPA-on-CPU: CPU says nothing about a server blocked on a GPU.
+  enabled: true
+  minReplicas: 1
+  maxReplicas: 1
+
+  # The useful signal - load arriving at the gateway - only exists in
+  # Prometheus.
+  prometheus:
+    serverAddress: http://kube-prometheus-stack-prometheus.nullnode-observability.svc.cluster.local:9090
+    # Sustained request rate per replica before scaling out.
+    threshold: "4"
+    activationThreshold: "1"
+    # Primary: LiteLLM's own Prometheus callback.
+    query: >-
+      sum(rate(litellm_proxy_total_requests_metric_total{api_base=~".*ollama.*"}[2m]))
+    # Fallback if the Prometheus callback is gated in your LiteLLM build:
+    # spanmetrics derived from OTLP spans. Swap `query` for this.
+    fallbackQuery: >-
+      sum(rate(nullnode_calls_total{gen_ai_system="ollama"}[2m]))
+
+  # A model load costs tens of seconds, so flapping is worse than staying
+  # warm. Hence the long window.
+  scaleDownStabilizationSeconds: 600
+  cooldownPeriod: 600
+  pollingInterval: 30
+
+  # Frees VRAM when idle, but the request that wakes the pool may fail.
+  # See docs/adr/0004-scaling-signal.md
+  scaleToZero: false
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  # Writable: model runtimes touch more of the filesystem than is worth
+  # auditing here.
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop: ["ALL"]
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

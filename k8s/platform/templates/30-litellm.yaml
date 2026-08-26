@@ -1,0 +1,8 @@
+{{- if .Values.components.litellm.enabled }}
+{{/* The guardrail flag is derived from the Presidio component so the two
+     cannot drift. */}}
+{{- $c := deepCopy .Values.components.litellm }}
+{{- $derived := dict "guardrails" (dict "pii" (dict "enabled" .Values.components.presidio.enabled)) }}
+{{- $_ := set $c "values" (merge (deepCopy ($c.values | default dict)) $derived) }}
+{{ include "nullnode.localApp" (dict "root" $ "name" "litellm" "component" $c) }}
+{{- end }}

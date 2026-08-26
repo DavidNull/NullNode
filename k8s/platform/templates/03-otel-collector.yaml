@@ -1,0 +1,3 @@
+{{- if .Values.components.otelCollector.enabled }}
+{{ include "nullnode.upstreamApp" (dict "root" $ "name" "otel-collector" "component" .Values.components.otelCollector) }}
+{{- end }}

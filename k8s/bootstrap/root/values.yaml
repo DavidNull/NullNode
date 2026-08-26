@@ -1,0 +1,15 @@
+# Injected by infra/terraform/platform-bootstrap. Change the Terraform
+# variables, not this file.
+gitops:
+  repoURL: https://github.com/DavidNull/NullNode.git
+  targetRevision: main
+  path: k8s/platform
+
+platform:
+  # gpu | cpu - selects the platform values file layered on top.
+  profile: gpu
+  # Host suffix for every Ingress the platform creates.
+  hostSuffix: nullnode.localhost
+
+argocd:
+  namespace: argocd

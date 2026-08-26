@@ -1,0 +1,3 @@
+{{- if .Values.components.keda.enabled }}
+{{ include "nullnode.upstreamApp" (dict "root" $ "name" "keda" "component" .Values.components.keda) }}
+{{- end }}

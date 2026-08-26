@@ -1,0 +1,3 @@
+{{- if .Values.components.ollama.enabled }}
+{{ include "nullnode.localApp" (dict "root" $ "name" "ollama" "component" .Values.components.ollama) }}
+{{- end }}
