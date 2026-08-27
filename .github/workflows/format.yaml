@@ -1,0 +1,44 @@
+name: Format
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: format-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  format:
+    name: Formatting and linters
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      - name: Install formatters
+        run: |
+          # shfmt
+          curl -sSfLo /tmp/shfmt https://github.com/mvdan/sh/releases/download/v3.10.0/shfmt_v3.10.0_linux_amd64
+          sudo install -m 0755 /tmp/shfmt /usr/local/bin/shfmt
+          # actionlint
+          curl -sSfLO https://github.com/rhysd/actionlint/releases/download/v1.7.4/actionlint_1.7.4_linux_amd64.tar.gz
+          tar -xzf actionlint_1.7.4_linux_amd64.tar.gz actionlint
+          sudo install -m 0755 actionlint /usr/local/bin/actionlint
+          # hadolint
+          curl -sSfLo /tmp/hadolint https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
+          sudo install -m 0755 /tmp/hadolint /usr/local/bin/hadolint
+          # markdownlint
+          npm install -g markdownlint-cli2@0.14.0
+
+      - name: Check formatting
+        run: ./scripts/security.sh format

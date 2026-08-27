@@ -1,0 +1,20 @@
+# kube-linter runs over the manifests the charts actually render, which is
+# where securityContext and resource mistakes show up.
+checks:
+  addAllBuiltIn: true
+  exclude:
+    # Namespaces come from Terraform, not from the charts.
+    - default-service-account
+    # Anti-affinity across a single node is unsatisfiable by definition.
+    - no-anti-affinity
+    # Deprecated in favour of topologySpreadConstraints, which the gateway uses.
+    - unset-cpu-requirements
+    # Deliberate: see the comment in k8s/charts/ollama/values.yaml. Model
+    # runtimes touch more of the filesystem than is worth auditing here.
+    - no-read-only-root-fs
+    # The bootstrap Job is a one-shot ArgoCD hook.
+    - dangling-service
+    # Latest tags are already blocked by the pinning policy in docs/ops/VERSIONS.md
+    - unset-memory-requirements
+
+customChecks: []

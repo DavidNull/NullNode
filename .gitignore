@@ -56,3 +56,7 @@ __pycache__/
 
 # Rendered manifests from local debugging
 /build/
+
+# Security scan reports
+/reports/
+*.sarif

@@ -1,0 +1,20 @@
+title = "NullNode"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Values that look like credentials but are not"
+
+paths = [
+  # Quotes the credentials that used to be committed, as the reason not to.
+  '''docs/adr/0005-secrets-flow\.md''',
+  '''docs/context/AUDITORIA-PLANTILLA\.md''',
+]
+
+regexes = [
+  # LocalStack ignores credentials; these two literals are the convention.
+  '''(access_key|secret_key|access-key-id|secret-access-key)\s*=?:?\s*"?test"?''',
+  # The mock SigV4 header in the bootstrap script and the Makefile.
+  '''Credential=test/\d+/[a-z0-9-]+/secretsmanager/aws4_request''',
+]

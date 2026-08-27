@@ -55,7 +55,11 @@ terraform -chdir=infra/terraform/platform-bootstrap apply \
 observabilidad y los pesos de los modelos. Cortar con `^C` es seguro: ArgoCD
 sigue reconciliando por dentro.
 
-**5. Nada de esto se ha ejecutado todavía.** Las versiones de los charts de
+**5. No hay UI de chat dentro de la plataforma.** Lo que sale de `make up` es un
+endpoint compatible con OpenAI. El camino previsto es un dev conectando VS Code
+con Continue o Cline: [docs/uso/CONECTAR.md](docs/uso/CONECTAR.md).
+
+**6. Nada de esto se ha ejecutado todavía.** Las versiones de los charts de
 terceros están pinneadas sin acceso a red: pasa `make versions-check` antes del
 primer despliegue. Y los nombres de las métricas de LiteLLM dependen de la
 versión pinneada, lo que afecta a dashboards, alertas y al trigger de KEDA
@@ -115,129 +119,113 @@ petición completa en S3.
 
 ## Requisitos
 
-Docker, k3d ≥ 5.6, kubectl, Helm ≥ 3.14, Terraform ≥ 1.6. `make up` los
-comprueba y enlaza la instalación de lo que falte.
+Docker, k3d ≥ 5.6, kubectl, Helm ≥ 3.14, Terraform ≥ 1.6. El preflight de
+`make up` los comprueba y enlaza la instalación de lo que falte.
+
+También `make`, que en una WSL2 recién instalada no viene:
+`sudo apt install make`. Si prefieres no instalarlo, todos los targets son
+envoltorios finos sobre `scripts/`:
+
+| `make` | equivalente |
+| --- | --- |
+| `make up` | `./scripts/up.sh` |
+| `make down` | `./scripts/down.sh` |
+| `make status` | `./scripts/status.sh` |
+| `make smoke` | `./scripts/smoke.sh` |
+| `make validate` | `./scripts/validate.sh` |
+| `make security` | `./scripts/security.sh` |
+| `PROFILE=cpu make up` | `PROFILE=cpu ./scripts/up.sh` |
 
 16 GiB de RAM y ~60 GiB de disco en perfil GPU; 8 GiB de RAM en CPU.
 
 ## Arranque
 
 ```bash
-git clone https://github.com/DavidNull/NullNode.git
-cd NullNode
+# Clonar el repositorio
+git clone <repository-url>
+cd null-node
 
-make k3s-cuda-image     # solo perfil GPU, solo la primera vez
-make up
-make hosts              # imprime la línea para /etc/hosts
+# Ejecutar el script de despliegue
+./scripts/up.sh
 ```
 
-| Endpoint | |
-| --- | --- |
-| Gateway | `http://gateway.nullnode.localhost:8080` |
-| Grafana | `http://grafana.nullnode.localhost:8080` |
-| Prometheus | `http://prometheus.nullnode.localhost:8080` |
-| ArgoCD | `http://argocd.nullnode.localhost:8080` |
-| LocalStack | `http://127.0.0.1:4566` |
+El script automáticamente:
+1. Valida prerrequisitos (Docker, K3s/K3d, Terraform)
+2. Provisiona la infraestructura base local y despliega ArgoCD
+3. Despliega el ecosistema completo: LiteLLM Proxy, Redis, Ollama, KEDA, Prometheus y Grafana
+4. Muestra los endpoints listos para usar
 
-Un solo puerto, enrutado por host ([ADR-0003](docs/adr/0003-single-entrypoint.md)).
+## 🔗 Endpoints
 
-### Primera petición
+- **AI Gateway (LiteLLM)**: http://localhost:4000
+- **Grafana Dashboard**: http://localhost:3000
+- **Prometheus**: http://localhost:9090
+- **ArgoCD UI**: http://localhost:8080
+
+## 🛠️ Arquitectura
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    IronNode Platform                         │
+├─────────────────────────────────────────────────────────────┤
+│  User/Developer                                              │
+│       │                                                      │
+│       ▼                                                      │
+│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐   │
+│  │  ./up.sh     │───▶│  Terraform   │───▶│  K3d/K3s     │   │
+│  └──────────────┘    └──────────────┘    └──────────────┘   │
+│                                              │                │
+│                                              ▼                │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │                  ArgoCD (GitOps)                     │   │
+│  └──────────────────────────────────────────────────────┘   │
+│       │              │              │              │        │
+│       ▼              ▼              ▼              ▼        │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
+│  │ LiteLLM  │  │  Redis   │  │  Ollama  │  │  KEDA    │   │
+│  │ Gateway  │  │  Cache   │  │ Workers  │  │ Scaler   │   │
+│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
+│       │              │              │              │        │
+│       └──────────────┴──────────────┴──────────────┘        │
+│                              │                               │
+│                              ▼                               │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │         Observability (Prometheus + Grafana)         │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+## 📁 Estructura del Proyecto
+
+```
+iron-node/
+├── .github/workflows/    # CI/CD pipelines
+├── terraform/            # IaC para infraestructura base
+├── k8s/
+│   ├── bootstrap/        # Configuración inicial de ArgoCD
+│   └── platform/         # Helm Charts y manifiestos de aplicaciones
+├── scripts/              # Scripts de automatización (up.sh, down.sh)
+├── CONTEXT.md            # Documentación de arquitectura
+├── AVANCES.md            # Registro de avances
+└── GOTO.md               # Plan de acción
+```
+
+## 🧹 Limpieza
 
 ```bash
-KEY=$(make -s key)
-
-curl http://gateway.nullnode.localhost:8080/v1/chat/completions \
-  -H "Authorization: Bearer $KEY" \
-  -H 'Content-Type: application/json' \
-  -d '{
-    "model": "llama3.2",
-    "messages": [{"role": "user", "content": "Hola"}]
-  }'
+# Destruir toda la infraestructura
+./scripts/down.sh
 ```
 
-Esa es la master key. Para uso normal, la clave del departamento:
-`make department-keys`.
+## 📚 Documentación
 
-Repite la misma petición dos veces y mira la latencia: la segunda sale de Redis.
+- [CONTEXT.md](CONTEXT.md) - Contexto y visión de arquitectura
+- [AVANCES.md](AVANCES.md) - Registro de avances del proyecto
+- [GOTO.md](GOTO.md) - Plan de acción y siguientes pasos
 
-## Comandos
+## 🤝 Contribución
 
-```
-make up                  Levanta la plataforma
-make down                La tira, conservando los modelos descargados
-make purge               La tira todo, modelos incluidos
-make status              Endpoints, credenciales y lo que no esté sano
-make smoke               Test end-to-end: ingress → auth → modelo → caché → S3
-make validate            Todo lo verificable sin clúster (lo mismo que CI)
-make load-test           Perfil de carga con k6
-make logs                Logs del gateway
-make key                 Master key del gateway
-make department-keys     Claves virtuales por departamento
-make versions-check      Comprueba que las versiones pinneadas existen
-make help                Todo lo anterior con descripciones
-```
-
-`scripts/up.sh` acepta `--only <fase>` y `--from <fase>` para retomar un arranque
-a medias sin repetir lo que ya funcionó.
-
-Antes de pushear: `make validate`. Linta y renderiza todos los charts en los dos
-perfiles, valida los dos stacks de Terraform y pasa shellcheck. Es lo que corre
-CI.
-
-## Estructura
-
-```
-NullNode/
-├── Makefile                     Interfaz del operador
-├── infra/
-│   ├── k3d/                     Config declarativo del clúster (perfiles gpu/cpu)
-│   │   └── cuda/                Imagen de k3s con runtime NVIDIA
-│   └── terraform/
-│       ├── cloud-mock/          LocalStack + S3 + Secrets Manager
-│       └── platform-bootstrap/  Namespaces, secretos, ArgoCD, Application raíz
-├── k8s/
-│   ├── bootstrap/root/          AppProject + Application raíz (el único apply imperativo)
-│   ├── platform/                App-of-apps: cada template es una Application
-│   │   └── values/              Values de los charts de terceros
-│   └── charts/                  Charts propios: litellm, ollama, redis, postgres,
-│                                presidio, nullnode-observability
-├── scripts/                     up, down, status, smoke, validate, versions-check
-├── tests/load/                  Perfil de carga k6
-└── docs/                        Ver abajo
-```
-
-## Documentación
-
-`docs/` está commiteado a propósito. Es el estado del proyecto por escrito: lo
-que hay que leer —persona o agente— para retomar el trabajo sin reconstruir el
-razonamiento desde el código.
-
-```
-docs/
-├── context/     Contexto del proyecto: qué es, qué falta, qué se hizo
-│   ├── CONTEXT.md               Qué es la plataforma y por qué está montada así
-│   ├── GOTO.md                  Qué falta, en orden
-│   ├── AVANCES.md               Qué se hizo y cuándo
-│   └── AUDITORIA-PLANTILLA.md   Qué estaba roto en la versión inicial
-├── ops/         Operación
-│   ├── RUNBOOK.md               Diagnóstico por síntoma y por alerta
-│   └── VERSIONS.md              Versiones pinneadas y cómo actualizarlas
-└── adr/         Una ADR por decisión que no se entiende leyendo el código
-```
-
-Convención al cerrar un bloque de trabajo: actualizar `AVANCES.md` y `GOTO.md`.
-Si la decisión cambia la arquitectura, además una ADR. Los comentarios del
-código referencian las ADRs por ruta, así que renombrar un fichero de `adr/`
-implica actualizar esas referencias.
-
-Punto de entrada según lo que busques:
-
-- Algo falla → [docs/ops/RUNBOOK.md](docs/ops/RUNBOOK.md)
-- Por qué está hecho así → [docs/adr/](docs/adr/)
-- Qué es esto → [docs/context/CONTEXT.md](docs/context/CONTEXT.md)
-- Qué viene después → [docs/context/GOTO.md](docs/context/GOTO.md)
-
-Los comentarios del código están en inglés; la documentación, en castellano.
+Este proyecto sigue un enfoque de infraestructura como código y GitOps. Todas las contribuciones deben seguir los patrones establecidos en la documentación.
 
 ## Licencia
 

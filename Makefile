@@ -66,6 +66,16 @@ fmt: ## Format Terraform in place
 versions-check: ## Verify the pinned upstream chart versions still exist
 	@./scripts/versions-check.sh
 
+.PHONY: security
+security: ## Trivy, Checkov, kube-linter and gitleaks (skips what is not installed)
+	@./scripts/security.sh
+
+.PHONY: fmt-check
+fmt-check: ## Formatting only: terraform, shfmt, actionlint, hadolint, markdownlint
+	@./scripts/security.sh format
+
+.PHONY: check
+check: validate security ## Everything a PR has to pass
 # --------------------------------------------------------------- images
 .PHONY: k3s-cuda-image
 k3s-cuda-image: ## Build the CUDA-enabled k3s node image (GPU profile only)
