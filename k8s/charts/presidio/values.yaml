@@ -1,0 +1,47 @@
+global:
+  namespace: nullnode-platform
+  hostSuffix: nullnode.localhost
+  monitoring:
+    enabled: true
+    releaseLabel: kube-prometheus-stack
+
+analyzer:
+  image:
+    repository: mcr.microsoft.com/presidio-analyzer
+    tag: "2.2.355"
+  replicaCount: 1
+  port: 3000
+  resources:
+    requests:
+      cpu: 200m
+      # The spaCy model loads at boot; below ~1 GiB it is OOMKilled during
+      # startup, not under load.
+      memory: 1Gi
+    limits:
+      memory: 2Gi
+
+anonymizer:
+  image:
+    repository: mcr.microsoft.com/presidio-anonymizer
+    tag: "2.2.355"
+  replicaCount: 1
+  port: 3000
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop: ["ALL"]

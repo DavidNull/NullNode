@@ -1,0 +1,49 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended", ":semanticCommits"],
+  "timezone": "Europe/Madrid",
+  "schedule": ["before 6am on monday"],
+  "labels": ["dependencies"],
+  "packageRules": [
+    {
+      "description": "Upstream chart versions are pinned by hand in the app-of-apps values; Renovate is what keeps those pins honest.",
+      "matchFileNames": ["k8s/platform/values.yaml", "infra/terraform/**"],
+      "groupName": "platform chart pins"
+    },
+    {
+      "description": "Model runtime and gateway move fast and change behaviour; review these individually.",
+      "matchPackageNames": [
+        "ollama/ollama",
+        "ghcr.io/berriai/litellm-non_root"
+      ],
+      "separateMinorPatch": true,
+      "automerge": false
+    },
+    {
+      "description": "Datastores and exporters are safe to batch.",
+      "matchPackageNames": [
+        "redis",
+        "postgres",
+        "oliver006/redis_exporter",
+        "quay.io/prometheuscommunity/postgres-exporter"
+      ],
+      "groupName": "datastores and exporters"
+    },
+    {
+      "description": "k3s node image has to stay in step with the CUDA image built from it.",
+      "matchPackageNames": ["rancher/k3s"],
+      "groupName": "k3s"
+    }
+  ],
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Pinned chart versions in the app-of-apps values",
+      "managerFilePatterns": ["/^k8s/platform/values\\.yaml$/"],
+      "matchStrings": [
+        "repoURL: (?<registryUrl>https?://[^\\s]+)\\s+chart: (?<depName>[^\\s]+)\\s+version: \"(?<currentValue>[^\"]+)\""
+      ],
+      "datasourceTemplate": "helm"
+    }
+  ]
+}

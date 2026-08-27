@@ -1,0 +1,75 @@
+{{- if .Values.bootstrap.enabled }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "litellm.fullname" . }}-bootstrap
+  labels:
+    {{- include "litellm.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+data:
+  bootstrap_departments.py: |
+{{ .Files.Get "files/bootstrap_departments.py" | indent 4 }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  # Keyed off the departments: a Job pod template is immutable, so adding one
+  # has to produce a new name.
+  name: {{ include "litellm.fullname" . }}-bootstrap-{{ .Values.departments | toJson | sha256sum | trunc 8 }}
+  labels:
+    {{- include "litellm.labels" . | nindent 4 }}
+  annotations:
+    argocd.argoproj.io/hook: PostSync
+    argocd.argoproj.io/hook-delete-policy: BeforeHookCreation
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 3600
+  template:
+    metadata:
+      labels:
+        {{- include "litellm.selectorLabels" . | nindent 8 }}
+        nullnode.io/component: bootstrap
+    spec:
+      restartPolicy: Never
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      containers:
+        - name: bootstrap
+          image: "{{ .Values.bootstrap.image.repository }}:{{ .Values.bootstrap.image.tag }}"
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          command: ["python3", "/opt/bootstrap/bootstrap_departments.py"]
+          env:
+            - name: LITELLM_BASE_URL
+              value: "http://{{ include "litellm.fullname" . }}.{{ .Release.Namespace }}.svc.cluster.local:{{ .Values.service.port }}"
+            - name: LITELLM_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.aws.litellmSecret }}
+                  key: master-key
+            - name: DEPARTMENTS_JSON
+              value: {{ .Values.departments | toJson | quote }}
+            - name: AWS_ENDPOINT_URL
+              value: {{ .Values.global.aws.endpoint | quote }}
+            - name: AWS_REGION
+              value: {{ .Values.global.aws.region | quote }}
+            - name: DEPARTMENT_KEYS_SECRET_ID
+              value: {{ .Values.global.aws.departmentKeysSecretId | quote }}
+            - name: PUBLISH_KEYS
+              value: {{ .Values.bootstrap.publishKeysToSecretsManager | quote }}
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              memory: 256Mi
+          volumeMounts:
+            - name: script
+              mountPath: /opt/bootstrap
+              readOnly: true
+      volumes:
+        - name: script
+          configMap:
+            name: {{ include "litellm.fullname" . }}-bootstrap
+{{- end }}

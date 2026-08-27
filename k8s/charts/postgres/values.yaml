@@ -1,0 +1,64 @@
+global:
+  namespace: nullnode-platform
+  hostSuffix: nullnode.localhost
+  storageClass: local-path
+  observabilityNamespace: nullnode-observability
+  monitoring:
+    enabled: true
+    releaseLabel: kube-prometheus-stack
+
+image:
+  repository: postgres
+  tag: "16.4-alpine"
+  pullPolicy: IfNotPresent
+
+auth:
+  database: litellm
+  username: litellm
+  # Built by platform-bootstrap; same value LiteLLM receives.
+  existingSecret: nullnode-postgres-auth
+  passwordKey: postgres-password
+
+persistence:
+  enabled: true
+  size: 8Gi
+
+service:
+  port: 5432
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+metrics:
+  enabled: true
+  image:
+    repository: quay.io/prometheuscommunity/postgres-exporter
+    tag: "v0.15.0"
+  port: 9187
+  resources:
+    requests:
+      cpu: 10m
+      memory: 32Mi
+    limits:
+      memory: 128Mi
+
+networkPolicy:
+  enabled: false
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 70
+  runAsGroup: 70
+  fsGroup: 70
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop: ["ALL"]

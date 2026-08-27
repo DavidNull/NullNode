@@ -1,0 +1,9 @@
+apiVersion: v2
+name: litellm
+description: >-
+  LiteLLM proxy - the AI gateway. Every LLM call goes through here: virtual API
+  keys, per-department budgets and rate limits, prompt cache in Redis, PII
+  guardrail, audit to S3, OTLP traces and Prometheus metrics.
+type: application
+version: 1.0.0
+appVersion: "1.72.6"

@@ -1,0 +1,3 @@
+{{- if .Values.components.nvidiaDevicePlugin.enabled }}
+{{ include "nullnode.upstreamApp" (dict "root" $ "name" "nvidia-device-plugin" "component" .Values.components.nvidiaDevicePlugin) }}
+{{- end }}

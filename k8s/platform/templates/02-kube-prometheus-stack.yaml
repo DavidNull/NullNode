@@ -1,0 +1,3 @@
+{{- if .Values.components.observabilityStack.enabled }}
+{{ include "nullnode.upstreamApp" (dict "root" $ "name" "kube-prometheus-stack" "component" .Values.components.observabilityStack) }}
+{{- end }}

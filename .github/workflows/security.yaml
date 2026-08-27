@@ -1,0 +1,101 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    # New CVEs land against unchanged code, so scan on a timer too.
+    - cron: "0 5 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  iac:
+    name: IaC misconfiguration
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sudo sh -s -- -b /usr/local/bin v0.56.2
+
+      - name: Install Checkov
+        run: pipx install checkov
+
+      - name: Scan Terraform and Dockerfile
+        run: ./scripts/security.sh iac
+
+  manifests:
+    name: Rendered manifests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+
+      - name: Install Trivy
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sudo sh -s -- -b /usr/local/bin v0.56.2
+
+      - name: Install kube-linter
+        run: |
+          curl -sSfLO https://github.com/stackrox/kube-linter/releases/download/v0.6.8/kube-linter-linux.tar.gz
+          tar -xzf kube-linter-linux.tar.gz
+          sudo install -m 0755 kube-linter /usr/local/bin/kube-linter
+
+      # Renders every chart and scans the output: securityContext, resource
+      # limits, image tags and host mounts only exist after templating.
+      - name: Scan what the charts actually produce
+        run: ./scripts/security.sh manifests
+
+  secrets:
+    name: Secret scanning
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # gitleaks needs the history: a rotated credential still in an old
+          # commit is still a leaked credential.
+          fetch-depth: 0
+
+      - name: Install gitleaks
+        run: |
+          curl -sSfLO https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz
+          tar -xzf gitleaks_8.21.2_linux_x64.tar.gz gitleaks
+          sudo install -m 0755 gitleaks /usr/local/bin/gitleaks
+
+      - name: Install Trivy
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sudo sh -s -- -b /usr/local/bin v0.56.2
+
+      - run: ./scripts/security.sh secrets
+
+  images:
+    name: Container image CVEs
+    runs-on: ubuntu-latest
+    # Informational: the LiteLLM and Ollama images are several GiB and their CVE
+    # count is dominated by the CUDA and Python base layers. Useful to read, not
+    # useful as a gate.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Trivy
+        run: |
+          curl -sSfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh \
+            | sudo sh -s -- -b /usr/local/bin v0.56.2
+
+      - run: ./scripts/security.sh images

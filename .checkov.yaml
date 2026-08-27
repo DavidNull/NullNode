@@ -1,0 +1,28 @@
+# Checkov configuration. Runs over infra/terraform and the rendered manifests.
+directory:
+  - infra/terraform
+
+framework:
+  - terraform
+  - dockerfile
+
+quiet: true
+compact: true
+
+skip-check:
+  # --- mocked cloud: these controls have no meaning against LocalStack -----
+  # KMS-encrypted S3: LocalStack Community has no KMS.
+  - CKV_AWS_145
+  # S3 access logging: logging a mock bucket into another mock bucket.
+  - CKV_AWS_18
+  # Cross-region replication: there is one region and it is fake.
+  - CKV_AWS_144
+  # Secrets Manager KMS key: same reason as above.
+  - CKV_AWS_149
+  # S3 event notifications / lifecycle on all prefixes: the lifecycle rule is
+  # deliberately scoped to audit/ only.
+  - CKV2_AWS_61
+  # --- local lab -----------------------------------------------------------
+  # Provider version pinning is done in versions.tf with ~> constraints, which
+  # Checkov does not always recognise.
+  - CKV_TF_1

@@ -1,0 +1,166 @@
+global:
+  namespace: nullnode-platform
+  observabilityNamespace: nullnode-observability
+  hostSuffix: nullnode.localhost
+  ingressClassName: traefik
+  storageClass: local-path
+  aws:
+    region: eu-west-1
+    endpoint: http://host.k3d.internal:4566
+    vaultBucket: nullnode-model-vault
+    credentialsSecret: nullnode-aws-credentials
+    litellmSecret: nullnode-litellm-credentials
+    departmentKeysSecretId: nullnode/litellm/department-keys
+  monitoring:
+    enabled: true
+    releaseLabel: kube-prometheus-stack
+  otel:
+    enabled: true
+    endpoint: http://otel-collector-opentelemetry-collector.nullnode-observability.svc.cluster.local:4317
+
+image:
+  # The default image assumes uid 0; this variant exists for a restricted
+  # securityContext.
+  repository: ghcr.io/berriai/litellm-non_root
+  tag: "main-v1.72.6-stable"
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+service:
+  port: 4000
+
+ingress:
+  enabled: true
+  hostPrefix: gateway
+
+# Model catalogue. `ollama_chat/*` is the chat adapter; plain `ollama/*` uses
+# the completion API and follows instructions noticeably worse.
+models:
+  - name: llama3.2
+    params:
+      model: ollama_chat/llama3.2:3b
+    info:
+      mode: chat
+  - name: qwen2.5-coder
+    params:
+      model: ollama_chat/qwen2.5-coder:7b
+    info:
+      mode: chat
+
+# Default api_base for the models above.
+ollama:
+  apiBase: http://ollama.nullnode-platform.svc.cluster.local:11434
+
+redis:
+  host: redis.nullnode-platform.svc.cluster.local
+  port: 6379
+  authSecret: nullnode-redis-auth
+  passwordKey: redis-password
+
+postgres:
+  host: postgres.nullnode-platform.svc.cluster.local
+  port: 5432
+  database: litellm
+  username: litellm
+  authSecret: nullnode-postgres-auth
+  passwordKey: postgres-password
+
+cache:
+  enabled: true
+  ttlSeconds: 3600
+  namespace: nullnode.cache
+
+router:
+  # least-busy needs shared Redis: otherwise each pod only sees its own
+  # view of the pool.
+  strategy: least-busy
+  numRetries: 3
+  timeoutSeconds: 600
+  allowedFails: 3
+  cooldownSeconds: 30
+
+audit:
+  # Request logs to the mocked S3 bucket, expired by the lifecycle rule in
+  # infra/terraform/cloud-mock/s3.tf.
+  enabled: true
+  prefix: audit
+
+guardrails:
+  pii:
+    # Derived from components.presidio.enabled by the platform chart.
+    enabled: false
+    mode: pre_call
+    analyzerApiBase: http://presidio-analyzer.nullnode-platform.svc.cluster.local:3000
+    anonymizerApiBase: http://presidio-anonymizer.nullnode-platform.svc.cluster.local:3000
+    entities:
+      - CREDIT_CARD
+      - EMAIL_ADDRESS
+      - IBAN_CODE
+      - PERSON
+      - PHONE_NUMBER
+      - IP_ADDRESS
+
+# Departments. The bootstrap Job turns each entry into a LiteLLM team plus a
+# virtual key, stored in the mocked Secrets Manager. Budgets are USD against
+# LiteLLM's price table; local models cost nothing, so they are a rehearsal.
+departments:
+  - name: engineering
+    maxBudget: 100
+    budgetDuration: 30d
+    tpmLimit: 400000
+    rpmLimit: 1200
+    models: ["llama3.2", "qwen2.5-coder"]
+  - name: data-science
+    maxBudget: 250
+    budgetDuration: 30d
+    tpmLimit: 800000
+    rpmLimit: 2000
+    models: ["llama3.2", "qwen2.5-coder"]
+  - name: support
+    maxBudget: 25
+    budgetDuration: 30d
+    tpmLimit: 100000
+    rpmLimit: 300
+    models: ["llama3.2"]
+
+bootstrap:
+  # ArgoCD PostSync hook. Idempotent: existing teams are reused.
+  enabled: true
+  image:
+    repository: python
+    tag: "3.12-alpine"
+  # Publish the minted keys to Secrets Manager.
+  publishKeysToSecretsManager: true
+
+autoscaling:
+  # Plain HPA, unlike Ollama: the gateway is genuinely CPU bound (JSON,
+  # token counting, guardrail calls). See docs/adr/0004-scaling-signal.md
+  enabled: true
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+  limits:
+    memory: 1536Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop: ["ALL"]
+
+networkPolicy:
+  enabled: false

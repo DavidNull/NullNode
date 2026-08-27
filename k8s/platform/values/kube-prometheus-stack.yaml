@@ -1,0 +1,133 @@
+# Upstream kube-prometheus-stack values.
+#
+# Consumed through ArgoCD's `$values` ref, so this is plain YAML - no Helm
+# templating reaches it. Host names are literal: keep them in sync with
+# global.hostSuffix in ../values.yaml.
+
+crds:
+  enabled: true
+
+# k3s runs the control plane as one binary and exposes no per-component
+# metrics endpoints. Scraping them only produces red targets.
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeEtcd:
+  enabled: false
+
+defaultRules:
+  create: true
+  rules:
+    etcd: false
+    kubeProxy: false
+    kubeSchedulerAlerting: false
+    kubeSchedulerRecording: false
+    kubeControllerManager: false
+
+prometheus:
+  prometheusSpec:
+    retention: 7d
+    retentionSize: 8GB
+    scrapeInterval: 15s
+    evaluationInterval: 15s
+
+    # Pick up ServiceMonitors and rules from any namespace, labelled or not.
+    # In a single-tenant lab the label dance only hides scrape gaps.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    probeSelectorNilUsesHelmValues: false
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        memory: 2Gi
+
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: local-path
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: 10Gi
+
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hosts:
+      - prometheus.nullnode.localhost
+    paths: ["/"]
+
+alertmanager:
+  enabled: true
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 20m
+        memory: 64Mi
+      limits:
+        memory: 256Mi
+  config:
+    route:
+      group_by: ["alertname", "namespace"]
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: "null"
+    receivers:
+      - name: "null"
+
+grafana:
+  enabled: true
+
+  # Password comes from the Secret Terraform builds out of Secrets Manager.
+  admin:
+    existingSecret: nullnode-grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+
+  defaultDashboardsEnabled: true
+
+  persistence:
+    enabled: true
+    storageClassName: local-path
+    size: 2Gi
+
+  ingress:
+    enabled: true
+    ingressClassName: traefik
+    hosts:
+      - grafana.nullnode.localhost
+    path: /
+
+  # Picks up the labelled ConfigMaps the nullnode-observability chart ships.
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana_dashboard
+      labelValue: "1"
+      searchNamespace: ALL
+      folderAnnotation: grafana_folder
+      provider:
+        foldersFromFilesStructure: true
+    datasources:
+      enabled: true
+      searchNamespace: ALL
+
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+nodeExporter:
+  enabled: true
+kube-state-metrics:
+  enabled: true

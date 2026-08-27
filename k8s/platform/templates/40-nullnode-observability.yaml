@@ -1,0 +1,7 @@
+{{- if .Values.components.observability.enabled }}
+{{/* GPU panels need DCGM metrics, which only exist on the GPU profile. */}}
+{{- $c := deepCopy .Values.components.observability }}
+{{- $derived := dict "gpu" (dict "enabled" .Values.components.dcgmExporter.enabled) }}
+{{- $_ := set $c "values" (merge (deepCopy ($c.values | default dict)) $derived) }}
+{{ include "nullnode.localApp" (dict "root" $ "name" "nullnode-observability" "component" $c) }}
+{{- end }}

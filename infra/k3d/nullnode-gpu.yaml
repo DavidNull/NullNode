@@ -1,0 +1,57 @@
+# NullNode cluster - GPU profile (default).
+# Needs the CUDA k3s image: `make k3s-cuda-image`.
+# No GPU? Use nullnode-cpu.yaml.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: nullnode
+
+# Single node: one workstation, one GPU. Add agents to test scheduling.
+servers: 1
+agents: 0
+
+image: nullnode/k3s-cuda:v1.31.2-k3s1
+
+kubeAPI:
+  hostIP: "127.0.0.1"
+  hostPort: "6443"
+
+# One entrypoint: Traefik (bundled with k3s) on 8080, routing by host.
+# See docs/adr/0003-single-entrypoint.md
+ports:
+  - port: "8080:80"
+    nodeFilters:
+      - loadbalancer
+  - port: "8443:443"
+    nodeFilters:
+      - loadbalancer
+
+# Named volume: model weights survive `k3d cluster delete`. Only
+# `make purge` removes them.
+volumes:
+  - volume: nullnode-storage:/var/lib/rancher/k3s/storage
+    nodeFilters:
+      - all
+
+registries:
+  create:
+    name: nullnode-registry
+    host: "127.0.0.1"
+    hostPort: "5000"
+
+options:
+  k3d:
+    wait: true
+    timeout: "300s"
+  k3s:
+    extraArgs:
+      - arg: --kube-apiserver-arg=event-ttl=2h
+        nodeFilters:
+          - server:*
+  kubeconfig:
+    updateDefaultKubeconfig: true
+    switchCurrentContext: true
+  runtime:
+    # Needs nvidia-container-toolkit as a Docker runtime on the host
+    # (on WSL2, inside the distro).
+    gpuRequest: all

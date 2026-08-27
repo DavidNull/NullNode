@@ -1,0 +1,48 @@
+# GPU profile. Needs the NVIDIA driver on the host, nvidia-container-toolkit
+# in Docker, and the CUDA k3s image (`make k3s-cuda-image`).
+components:
+  nvidiaDevicePlugin:
+    enabled: true
+
+  dcgmExporter:
+    enabled: true
+
+  ollama:
+    values:
+      gpu:
+        enabled: true
+        count: 1
+      resources:
+        requests:
+          cpu: "2"
+          memory: 6Gi
+        limits:
+          memory: 16Gi
+      env:
+        # Replicas cannot share one GPU, so concurrency goes vertical.
+        OLLAMA_NUM_PARALLEL: "4"
+        OLLAMA_MAX_LOADED_MODELS: "2"
+        OLLAMA_KEEP_ALIVE: "10m"
+      autoscaling:
+        # The device plugin gives the GPU to one pod; a second replica would
+        # sit Pending. The lever here is scale-to-zero, not scale-out.
+        minReplicas: 1
+        maxReplicas: 1
+      models:
+        - llama3.2:3b
+        - qwen2.5-coder:7b
+
+  litellm:
+    values:
+      # Kept explicit next to ollama.models so the two cannot drift.
+      models:
+        - name: llama3.2
+          params:
+            model: ollama_chat/llama3.2:3b
+          info:
+            mode: chat
+        - name: qwen2.5-coder
+          params:
+            model: ollama_chat/qwen2.5-coder:7b
+          info:
+            mode: chat

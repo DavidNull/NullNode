@@ -1,0 +1,189 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "litellm.fullname" . }}
+  labels:
+    {{- include "litellm.labels" . | nindent 4 }}
+    nullnode.io/component: gateway
+spec:
+  {{- if not .Values.autoscaling.enabled }}
+  replicas: {{ .Values.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "litellm.selectorLabels" . | nindent 6 }}
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 1
+      maxUnavailable: 0
+  template:
+    metadata:
+      labels:
+        {{- include "litellm.labels" . | nindent 8 }}
+        nullnode.io/component: gateway
+      annotations:
+        # Without this a config change sits in the ConfigMap doing nothing.
+        checksum/config: {{ include (print $.Template.BasePath "/configmap.yaml") . | sha256sum }}
+    spec:
+      securityContext:
+        {{- toYaml .Values.podSecurityContext | nindent 8 }}
+      # Prisma migrations run at boot; starting before Postgres accepts
+      # connections turns a cold start into a crash loop.
+      initContainers:
+        - name: wait-for-postgres
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          command: ["/bin/sh", "-c"]
+          args:
+            - |
+              set -eu
+              for _ in $(seq 1 60); do
+                if python -c "import socket,sys; s=socket.create_connection(('{{ .Values.postgres.host }}', {{ .Values.postgres.port }}), 3); s.close()" 2>/dev/null; then
+                  echo "postgres reachable"; exit 0
+                fi
+                echo "waiting for postgres..."; sleep 5
+              done
+              echo "postgres never became reachable" >&2; exit 1
+          resources:
+            requests:
+              cpu: 20m
+              memory: 64Mi
+            limits:
+              memory: 128Mi
+      containers:
+        - name: litellm
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.containerSecurityContext | nindent 12 }}
+          args:
+            - --config
+            - /etc/litellm/config.yaml
+            - --port
+            - {{ .Values.service.port | quote }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.service.port }}
+          env:
+            # --- identity / auth -------------------------------------------
+            - name: LITELLM_MASTER_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.aws.litellmSecret }}
+                  key: master-key
+            - name: LITELLM_SALT_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.aws.litellmSecret }}
+                  key: salt-key
+
+            # --- persistence ------------------------------------------------
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.postgres.authSecret }}
+                  key: {{ .Values.postgres.passwordKey }}
+            # $(VAR) is expanded from env declared above, keeping the
+            # password out of this literal.
+            - name: DATABASE_URL
+              value: "postgresql://{{ .Values.postgres.username }}:$(POSTGRES_PASSWORD)@{{ .Values.postgres.host }}:{{ .Values.postgres.port }}/{{ .Values.postgres.database }}"
+
+            # --- cache / shared router state --------------------------------
+            - name: REDIS_HOST
+              value: {{ .Values.redis.host | quote }}
+            - name: REDIS_PORT
+              value: {{ .Values.redis.port | quote }}
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.redis.authSecret }}
+                  key: {{ .Values.redis.passwordKey }}
+
+            # --- mocked cloud (S3 audit log, Secrets Manager) ---------------
+            - name: AWS_REGION
+              value: {{ .Values.global.aws.region | quote }}
+            - name: AWS_DEFAULT_REGION
+              value: {{ .Values.global.aws.region | quote }}
+            - name: AWS_ENDPOINT_URL
+              value: {{ .Values.global.aws.endpoint | quote }}
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.aws.credentialsSecret }}
+                  key: access-key-id
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.global.aws.credentialsSecret }}
+                  key: secret-access-key
+
+            {{- if .Values.global.otel.enabled }}
+            # --- tracing ----------------------------------------------------
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.global.otel.endpoint | quote }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: grpc
+            - name: OTEL_SERVICE_NAME
+              value: litellm-gateway
+            - name: OTEL_RESOURCE_ATTRIBUTES
+              value: "service.namespace=nullnode,deployment.environment=local"
+            {{- end }}
+
+            {{- if .Values.guardrails.pii.enabled }}
+            # --- guardrails -------------------------------------------------
+            - name: PRESIDIO_ANALYZER_API_BASE
+              value: {{ .Values.guardrails.pii.analyzerApiBase | quote }}
+            - name: PRESIDIO_ANONYMIZER_API_BASE
+              value: {{ .Values.guardrails.pii.anonymizerApiBase | quote }}
+            {{- end }}
+
+            - name: STORE_MODEL_IN_DB
+              value: "True"
+
+          # /health needs a key; these two do not.
+          startupProbe:
+            httpGet:
+              path: /health/liveliness
+              port: http
+            # Migrations on a cold database are slow: 30 x 10s = 5 min.
+            periodSeconds: 10
+            failureThreshold: 30
+          readinessProbe:
+            httpGet:
+              path: /health/readiness
+              port: http
+            periodSeconds: 10
+            timeoutSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /health/liveliness
+              port: http
+            periodSeconds: 30
+            timeoutSeconds: 5
+            failureThreshold: 5
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: config
+              mountPath: /etc/litellm
+              readOnly: true
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: config
+          configMap:
+            name: {{ include "litellm.fullname" . }}-config
+        - name: tmp
+          emptyDir: {}
+      # Let long generations finish instead of cutting the stream.
+      terminationGracePeriodSeconds: 90
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector:
+            matchLabels:
+              {{- include "litellm.selectorLabels" . | nindent 14 }}

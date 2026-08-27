@@ -1,0 +1,16 @@
+{{- if and .Values.metrics.enabled .Values.global.monitoring.enabled }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: {{ include "postgres.fullname" . }}
+  labels:
+    {{- include "postgres.labels" . | nindent 4 }}
+    release: {{ .Values.global.monitoring.releaseLabel }}
+spec:
+  selector:
+    matchLabels:
+      {{- include "postgres.selectorLabels" . | nindent 6 }}
+  endpoints:
+    - port: metrics
+      interval: 15s
+{{- end }}

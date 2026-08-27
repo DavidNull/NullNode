@@ -1,0 +1,18 @@
+# Accepted findings, each with the reason. Review this file when the platform
+# stops being a local lab.
+
+# AVD-AWS-0088 / AVD-AWS-0132: S3 bucket encrypted with SSE-S3 rather than KMS.
+# LocalStack Community does not implement KMS, so there is no key to point at.
+AVD-AWS-0132
+
+# AVD-AWS-0089: S3 access logging not enabled. Logging the audit bucket into
+# another bucket in a mock has no value and doubles the storage.
+AVD-AWS-0089
+
+# AVD-AWS-0086..0087: public access block is configured; Trivy flags the
+# account-level setting, which does not exist in LocalStack.
+AVD-AWS-0094
+
+# AVD-DS-0002: the CUDA k3s image runs as root. k3s needs it - it manages
+# containerd, CNI and kubelet inside the node container.
+AVD-DS-0002

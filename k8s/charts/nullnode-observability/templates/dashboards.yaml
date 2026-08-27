@@ -1,0 +1,20 @@
+{{- if .Values.dashboards.enabled }}
+{{- range $path, $_ := .Files.Glob "dashboards/*.json" }}
+{{- $name := base $path | trimSuffix ".json" }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "nullnode-observability.fullname" $ }}-{{ $name }}
+  labels:
+    {{- include "nullnode-observability.labels" $ | nindent 4 }}
+    # The sidecar discovers dashboards by this label, in any namespace it
+    # watches.
+    {{ $.Values.dashboards.label }}: {{ $.Values.dashboards.labelValue | quote }}
+  annotations:
+    grafana_folder: {{ $.Values.dashboards.folder | quote }}
+data:
+  {{ base $path }}: |
+{{ $.Files.Get $path | indent 4 }}
+{{- end }}
+{{- end }}
