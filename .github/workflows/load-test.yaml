@@ -35,11 +35,15 @@ jobs:
       - uses: grafana/setup-k6-action@v1
 
       - name: Run the load profile
+        env:
+          GATEWAY: ${{ inputs.gateway }}
+          MODEL: ${{ inputs.model }}
+          API_KEY: ${{ steps.key.outputs.value }}
         run: |
           k6 run tests/load/chat-completions.js \
-            -e GATEWAY='${{ inputs.gateway }}' \
-            -e MODEL='${{ inputs.model }}' \
-            -e API_KEY='${{ steps.key.outputs.value }}'
+            -e GATEWAY="$GATEWAY" \
+            -e MODEL="$MODEL" \
+            -e API_KEY="$API_KEY"
 
       - uses: actions/upload-artifact@v4
         if: always()

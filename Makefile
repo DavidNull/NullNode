@@ -25,6 +25,27 @@ help: ## Show this help
 	  | awk 'BEGIN {FS = ":.*?## "} {printf "  \033[0;32m%-22s\033[0m %s\n", $$1, $$2}'
 	@printf '\nCurrent profile: \033[0;33m%s\033[0m (override with PROFILE=cpu)\n' '$(PROFILE)'
 
+# --------------------------------------------------------------- setup
+.PHONY: setup
+setup: ## Install all required CLI tools (k3d, kubectl, helm, terraform)
+	@command -v docker >/dev/null 2>&1 || { printf 'Docker not found — install it from https://docs.docker.com/engine/install/ first\n'; exit 1; }
+	@printf 'Installing k3d v5.7.4...\n'
+	@curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.7.4 bash
+	@printf 'Installing kubectl...\n'
+	@curl -sSfLo /tmp/kubectl \
+	  "https://dl.k8s.io/release/$$(curl -sSfL https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+	@sudo install -m 0755 /tmp/kubectl /usr/local/bin/kubectl
+	@printf 'Installing Helm v3.16.2...\n'
+	@curl -sSfL https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 \
+	  | DESIRED_VERSION=v3.16.2 bash
+	@printf 'Installing Terraform 1.9.8...\n'
+	@curl -sSfLo /tmp/terraform.zip \
+	  https://releases.hashicorp.com/terraform/1.9.8/terraform_1.9.8_linux_amd64.zip
+	@unzip -o /tmp/terraform.zip -d /tmp terraform
+	@sudo install -m 0755 /tmp/terraform /usr/local/bin/terraform
+	@rm -f /tmp/terraform.zip /tmp/terraform /tmp/kubectl
+	@printf 'All tools installed.\n'
+
 # --------------------------------------------------------------- lifecycle
 .PHONY: up
 up: ## Bring the whole platform up

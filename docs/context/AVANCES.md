@@ -106,8 +106,6 @@ secretos y documentación. Coherente con el repositorio y con el remoto.
   prompts únicos contra repetidos. Sustituye a un `ab -p test-payload.json` cuyo
   fichero no existía.
 - `renovate.json` con custom manager para los pins del app-of-apps.
-<<<<<<< HEAD
-=======
 - Pipeline de seguridad (`security.yaml`, `make security`): Trivy sobre
   Terraform y Dockerfile, Trivy y kube-linter sobre los manifiestos
   renderizados, Checkov, gitleaks contra árbol e historia, y CVEs de imágenes
@@ -121,19 +119,15 @@ secretos y documentación. Coherente con el repositorio y con el remoto.
 - tfsec queda como opt-in (`WITH_TFSEC=true`): Aqua lo integró en Trivy y
   `trivy config` corre las mismas reglas, así que por defecto duplicaría
   hallazgos.
->>>>>>> origin/feature/security-pipelines
 
 ### Documentación
 
 - README reescrito, con la realidad de la GPU explicada de entrada.
-<<<<<<< HEAD
-=======
 - `docs/uso/CONECTAR.md`: guía para el dev que consume la plataforma. VS Code con
   Continue y Cline como camino principal, Open WebUI y SDKs después, y la tabla
   de resolución de nombres según desde dónde llames (navegador de Windows,
   extensión en WSL, `curl` en la distro, otro contenedor), que es la fuente
   habitual de "no conecta".
->>>>>>> origin/feature/security-pipelines
 - `../ops/RUNBOOK.md`: diagnóstico por síntoma y por alerta.
 - `../ops/VERSIONS.md`: inventario de pins y checklist de actualización de LiteLLM.
 - `../adr/`: seis ADRs con las decisiones y sus contrapartidas.

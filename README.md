@@ -138,95 +138,36 @@ envoltorios finos sobre `scripts/`:
 
 16 GiB de RAM y ~60 GiB de disco en perfil GPU; 8 GiB de RAM en CPU.
 
-## Arranque
+## Posibles mejoras
 
-```bash
-# Clonar el repositorio
-git clone <repository-url>
-cd null-node
+Lo que tiene sentido añadir sin cambiar la arquitectura base:
 
-# Ejecutar el script de despliegue
-./scripts/up.sh
-```
+- **GPUs no-NVIDIA.** El runtime CUDA es el único punto que ata la plataforma
+  a NVIDIA. Con ROCm (AMD) o CPU offloading (Apple Silicon vía GGML) el cambio
+  es en la imagen de k3s y en el device plugin; el gateway, la caché y el
+  resto no se tocan. Hoy no hay imagen k3s equivalente para ROCm, pero es
+  cuestión de tiempo.
 
-El script automáticamente:
-1. Valida prerrequisitos (Docker, K3s/K3d, Terraform)
-2. Provisiona la infraestructura base local y despliega ArgoCD
-3. Despliega el ecosistema completo: LiteLLM Proxy, Redis, Ollama, KEDA, Prometheus y Grafana
-4. Muestra los endpoints listos para usar
+- **Proveedor hosted en el catálogo.** Con todo local el dashboard de FinOps es
+  un ensayo. Un modelo de pago detrás de una variable convierte los
+  presupuestos por departamento en un control real.
 
-## 🔗 Endpoints
+- **External Secrets Operator.** El flujo ya tiene la forma correcta: el
+  operador leería el mismo Secrets Manager y mantendría los Secrets
+  sincronizados con rotación sin tener que hacer `terraform apply`.
 
-- **AI Gateway (LiteLLM)**: http://localhost:4000
-- **Grafana Dashboard**: http://localhost:3000
-- **Prometheus**: http://localhost:9090
-- **ArgoCD UI**: http://localhost:8080
+- **Open WebUI como componente opcional.** Hoy se documenta como un
+  `docker run` de cliente. Meterlo en el app-of-apps con `enabled: false`
+  daría chat con Ingress y clave de departamento sin pasos manuales.
 
-## 🛠️ Arquitectura
+- **Backend de trazas.** El collector ya recibe OTLP de LiteLLM y deriva
+  spanmetrics. Añadir Tempo y su datasource en Grafana permitiría abrir una
+  petición lenta y ver en qué paso se fue el tiempo.
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    IronNode Platform                         │
-├─────────────────────────────────────────────────────────────┤
-│  User/Developer                                              │
-│       │                                                      │
-│       ▼                                                      │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐   │
-│  │  ./up.sh     │───▶│  Terraform   │───▶│  K3d/K3s     │   │
-│  └──────────────┘    └──────────────┘    └──────────────┘   │
-│                                              │                │
-│                                              ▼                │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │                  ArgoCD (GitOps)                     │   │
-│  └──────────────────────────────────────────────────────┘   │
-│       │              │              │              │        │
-│       ▼              ▼              ▼              ▼        │
-│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐   │
-│  │ LiteLLM  │  │  Redis   │  │  Ollama  │  │  KEDA    │   │
-│  │ Gateway  │  │  Cache   │  │ Workers  │  │ Scaler   │   │
-│  └──────────┘  └──────────┘  └──────────┘  └──────────┘   │
-│       │              │              │              │        │
-│       └──────────────┴──────────────┴──────────────┘        │
-│                              │                               │
-│                              ▼                               │
-│  ┌──────────────────────────────────────────────────────┐   │
-│  │         Observability (Prometheus + Grafana)         │   │
-│  └──────────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────────┘
-```
+- **Namespaces multi-tenant.** Ahora hay cuotas lógicas en el gateway pero no
+  cuotas de recursos en Kubernetes. Un namespace por departamento con
+  `ResourceQuota` cierra esa brecha.
 
-## 📁 Estructura del Proyecto
+## Documentación
 
-```
-iron-node/
-├── .github/workflows/    # CI/CD pipelines
-├── terraform/            # IaC para infraestructura base
-├── k8s/
-│   ├── bootstrap/        # Configuración inicial de ArgoCD
-│   └── platform/         # Helm Charts y manifiestos de aplicaciones
-├── scripts/              # Scripts de automatización (up.sh, down.sh)
-├── CONTEXT.md            # Documentación de arquitectura
-├── AVANCES.md            # Registro de avances
-└── GOTO.md               # Plan de acción
-```
-
-## 🧹 Limpieza
-
-```bash
-# Destruir toda la infraestructura
-./scripts/down.sh
-```
-
-## 📚 Documentación
-
-- [CONTEXT.md](CONTEXT.md) - Contexto y visión de arquitectura
-- [AVANCES.md](AVANCES.md) - Registro de avances del proyecto
-- [GOTO.md](GOTO.md) - Plan de acción y siguientes pasos
-
-## 🤝 Contribución
-
-Este proyecto sigue un enfoque de infraestructura como código y GitOps. Todas las contribuciones deben seguir los patrones establecidos en la documentación.
-
-## Licencia
-
-Sin definir.
+[docs/](docs/) — arquitectura, decisiones, runbook, guía de conexión para devs.
