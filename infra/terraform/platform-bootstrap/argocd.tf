@@ -65,7 +65,7 @@ resource "helm_release" "argocd" {
       metrics = {
         enabled = true
         serviceMonitor = {
-          enabled = true
+          enabled          = true
           additionalLabels = { release = "kube-prometheus-stack" }
         }
       }
@@ -76,7 +76,7 @@ resource "helm_release" "argocd" {
       enabled = false
     }
 
-    notifications = { enabled = false }
+    notifications  = { enabled = false }
     applicationSet = { enabled = false }
 
     redis = {

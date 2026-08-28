@@ -69,7 +69,7 @@ versión pinneada, lo que afecta a dashboards, alertas y al trigger de KEDA
 
 ## Arquitectura
 
-```
+```text
                        ┌──────────────────────────────────────────┐
    tú ──── :8080 ─────▶│ Traefik (Ingress, incluido en k3s)       │
                        └───┬───────────┬───────────┬──────────────┘

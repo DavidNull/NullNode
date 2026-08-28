@@ -27,14 +27,14 @@ El chart `k8s/platform/localstack/` se ha eliminado.
 
 ## Consecuencias
 
-**A favor**
+### A favor
 
 - Se rompe el ciclo: LocalStack → recursos AWS → clúster → plataforma.
 - Los charts se configuran igual que contra AWS de verdad; solo cambia el
   endpoint.
 - Sobrevive a `k3d cluster delete`.
 
-**En contra**
+### En contra
 
 - Una pieza fuera de GitOps. Compromiso consciente: es la que *simula el
   proveedor*, no parte de la plataforma.

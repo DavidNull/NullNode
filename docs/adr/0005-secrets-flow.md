@@ -20,7 +20,7 @@ fuentes de verdad, ninguna rotable, ambas en git.
 
 Una sola dirección de flujo, sin vuelta atrás:
 
-```
+```bash
 random_password (Terraform)
       │
       ▼
@@ -47,14 +47,14 @@ Concretamente:
 
 ## Consecuencias
 
-**A favor**
+### A favor
 
 - Rotar la plataforma es `terraform taint` + `apply`.
 - Ni un valor con forma de credencial en el repositorio.
 - Es la forma del flujo que usarías en real: en lugar del data source, External
   Secrets Operator sobre el mismo secreto. Se sustituye una pieza.
 
-**En contra**
+### En contra
 
 - Los secretos están en claro en el estado local de Terraform. Aceptable en un
   lab, cubierto por `.gitignore`; en real exige backend remoto cifrado.

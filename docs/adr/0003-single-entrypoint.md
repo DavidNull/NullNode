@@ -28,13 +28,13 @@ Todos los Services internos son `ClusterIP`.
 
 ## Consecuencias
 
-**A favor**
+### A favor
 
 - Añadir un componente es añadir un Ingress, sin tocar el clúster.
 - Dos puertos del host en lugar de cinco.
 - El mismo Ingress vale contra un clúster real cambiando el sufijo DNS.
 
-**En contra**
+### En contra
 
 - Hay que resolver `*.nullnode.localhost`. Los navegadores lo hacen solos,
   `curl` con glibc no siempre: `make hosts` imprime la línea de `/etc/hosts`.

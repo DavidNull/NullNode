@@ -24,13 +24,13 @@ Terraform sigue siendo el motor de IaC de todo lo demás:
 
 ## Consecuencias
 
-**A favor**
+### A favor
 
 - El fichero de k3d es declarativo y versionado: no perdemos IaC.
 - Todas las opciones de k3d disponibles, incluida la de GPU.
 - Una dependencia menos en el arranque.
 
-**En contra**
+### En contra
 
 - El clúster no está en el estado de Terraform, así que `up.sh` comprueba si
   existe (`cluster_exists()`).

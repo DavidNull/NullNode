@@ -12,6 +12,8 @@ FROM nvidia/cuda:12.6.2-base-ubuntu24.04
 
 ARG NVIDIA_CONTAINER_TOOLKIT_VERSION=1.17.0
 
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
  && curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
@@ -26,8 +28,9 @@ RUN apt-get update \
  && rm -rf /var/lib/apt/lists/*
 
 # k3s expects an exact layout; copy it wholesale.
-COPY --from=k3s / / --exclude=/bin
-COPY --from=k3s /bin /bin
+COPY --from=k3s / /tmp/
+COPY --from=k3s /bin /tmp/bin/
+RUN cp -a /tmp/* / && rm -rf /tmp/*
 
 # k3s detects the runtime at startup and registers RuntimeClass "nvidia".
 RUN mkdir -p /etc/nvidia-container-runtime \

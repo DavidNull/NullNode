@@ -148,10 +148,12 @@ de las métricas de LiteLLM dependen de la versión pinneada (ADR-0006).
 > no era cierto está en [AUDITORIA-PLANTILLA.md](AUDITORIA-PLANTILLA.md).
 
 ### [2026-08-23] Inicialización del proyecto
+
 - Definición del stack tecnológico completo.
 - Estructura de directorios base y ficheros de gobernanza.
 
 ### [2026-08-23] Fases 1-5
+
 - `terraform/` con provider de k3d, variables y outputs.
 - Scripts `up.sh` y `down.sh`.
 - Bootstrap de ArgoCD vía kustomize y patrón app-of-apps.
@@ -160,6 +162,7 @@ de las métricas de LiteLLM dependen de la versión pinneada (ADR-0006).
 - Workflows de lint y load test.
 
 ### [2026-08-24] Fase 6 — Cloud mocking con LocalStack
+
 - Provider de AWS en Terraform apuntando a LocalStack.
 - Bucket S3 `ironnode-model-vault` y secreto `ironnode/litellm-master-key`.
 - Chart de LocalStack in-cluster e integración en el app-of-apps.
