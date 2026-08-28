@@ -30,7 +30,7 @@ for pin in "${PINS[@]}"; do
     -o json 2>/dev/null | sed -n 's/.*"version":"\([^"]*\)".*/\1/p' | head -n1)"
 
   if helm search repo "nullnode-check-${name}/${chart}" --version "$version" \
-       -o json 2>/dev/null | grep -q '"version"'; then
+    -o json 2>/dev/null | grep -q '"version"'; then
     if [[ -n "$latest" && "$latest" != "$version" ]]; then
       ok "${name} ${version} exists (latest: ${latest})"
     else

@@ -134,11 +134,11 @@ validate_python() {
 }
 
 case "$GROUP" in
-  helm)      validate_helm ;;
+  helm) validate_helm ;;
   terraform) validate_terraform ;;
-  shell)     validate_shell ;;
-  yaml)      validate_yaml ;;
-  python)    validate_python ;;
+  shell) validate_shell ;;
+  yaml) validate_yaml ;;
+  python) validate_python ;;
   all)
     validate_helm
     validate_terraform
@@ -150,7 +150,7 @@ case "$GROUP" in
 esac
 
 printf '\n'
-if (( FAILURES > 0 )); then
+if ((FAILURES > 0)); then
   die "${FAILURES} check(s) failed"
 fi
 ok "all checks passed"

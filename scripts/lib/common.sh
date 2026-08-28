@@ -19,9 +19,8 @@ INGRESS_HOSTS=(
   "prometheus.${HOST_SUFFIX}"
   "argocd.${HOST_SUFFIX}"
 )
-readonly INGRESS_HOSTS
 # shellcheck disable=SC2034
-# INGRESS_HOSTS is used by status.sh but defined here for sharing
+readonly INGRESS_HOSTS
 
 if [[ -t 1 ]]; then
   C_RESET=$'\033[0m'; C_RED=$'\033[0;31m'; C_GREEN=$'\033[0;32m'

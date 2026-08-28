@@ -26,6 +26,7 @@ jobs:
           terraform_wrapper: false
 
       - name: Install formatters
+        shell: bash
         run: |
           # shfmt
           curl -sSfLo /tmp/shfmt https://github.com/mvdan/sh/releases/download/v3.10.0/shfmt_v3.10.0_linux_amd64

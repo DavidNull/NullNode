@@ -15,7 +15,7 @@ ARG NVIDIA_CONTAINER_TOOLKIT_VERSION=1.17.0
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
 RUN apt-get update \
- && apt-get install -y --no-install-recommends ca-certificates curl gnupg \
+ && apt-get install -y --no-install-recommends ca-certificates=20230311 curl gnupg \
  && curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \
       | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg \
  && curl -fsSL https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list \
