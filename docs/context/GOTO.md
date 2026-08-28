@@ -34,8 +34,6 @@ Nada de esto se ha ejecutado. Orden de comprobación:
       despertar y si `num_retries` basta para no perder la primera petición.
 - [ ] **Presupuestos por usuario además de por equipo.** LiteLLM lo soporta;
       ahora mismo solo hay equipos por departamento.
-<<<<<<< HEAD
-=======
 - [ ] **Open WebUI como componente opcional.** Hoy se documenta como
       `docker run` (cliente, no infraestructura). Meterlo en el app-of-apps con
       `enabled: false` daría chat con Ingress y clave de departamento inyectada
@@ -43,7 +41,6 @@ Nada de esto se ha ejecutado. Orden de comprobación:
 - [ ] **Escaneo de las imágenes grandes en el gate.** LiteLLM y Ollama están
       fuera porque sus CVEs vienen de las capas base de CUDA y Python. Con una
       allowlist por capa base sí serían accionables.
->>>>>>> origin/feature/security-pipelines
 
 ## Después: lo que hace falta para que se parezca a producción
 

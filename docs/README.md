@@ -16,9 +16,6 @@ reconstruir el razonamiento desde el código.
 Al cerrar un bloque de trabajo se actualizan `AVANCES.md` y `GOTO.md`. Si la
 decisión cambia la arquitectura, además va una ADR.
 
-<<<<<<< HEAD
-## `ops/` — operación
-=======
 ## `uso/` — para el dev que consume la plataforma
 
 | Fichero | Para qué |
@@ -26,11 +23,11 @@ decisión cambia la arquitectura, además va una ADR.
 | [CONECTAR.md](uso/CONECTAR.md) | Conectar VS Code (Continue, Cline), Open WebUI, SDKs, y qué nombre resuelve desde dónde |
 
 ## `ops/` — para quien la opera
->>>>>>> origin/feature/security-pipelines
 
 | Fichero | Para qué |
 | --- | --- |
 | [RUNBOOK.md](ops/RUNBOOK.md) | Diagnóstico por síntoma y por alerta |
+| [TROUBLESHOOTING.md](ops/TROUBLESHOOTING.md) | Fallos frecuentes y cómo resolverlos |
 | [VERSIONS.md](ops/VERSIONS.md) | Versiones pinneadas y cómo actualizarlas |
 
 ## `adr/` — decisiones de arquitectura
