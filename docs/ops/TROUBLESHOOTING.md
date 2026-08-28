@@ -32,6 +32,7 @@ El preflight te dice exactamente cuál de los tres pasos falta:
    sudo nvidia-ctk runtime configure --runtime=docker
    sudo systemctl restart docker
    ```
+
 3. **Imagen CUDA de k3s** → `make k3s-cuda-image` (tarda unos minutos, solo una vez).
 
 Si no tienes GPU, usa `PROFILE=cpu make up`.

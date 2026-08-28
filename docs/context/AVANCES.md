@@ -24,7 +24,7 @@ secretos y documentación. Coherente con el repositorio y con el remoto.
 - `Dockerfile` para la imagen de k3s con runtime NVIDIA, necesaria para que un
   nodo de k3d (que es un contenedor) pueda ver la GPU.
 - Terraform partido en dos stacks con frontera explícita: `cloud-mock` (LocalStack
-  + S3 + Secrets Manager) y `platform-bootstrap` (namespaces, secretos, ArgoCD,
+  - S3 - Secrets Manager) y `platform-bootstrap` (namespaces, secretos, ArgoCD,
   Application raíz).
 - LocalStack pasa a ser un contenedor en el host, resolviendo el interbloqueo de
   la versión anterior. ADR-0002.
