@@ -98,15 +98,15 @@ petición completa en S3.
   <img src="docs/media/dashboards.gif" width="80%">
 </p>
 -->
+
 ## Requisitos
-
-Docker, k3d ≥ 5.6, kubectl, Helm ≥ 3.14, Terraform ≥ 1.6. El preflight de
-`make up` los comprueba y enlaza la instalación de lo que falte.
-
-También `make`, que en una WSL2 recién instalada no viene:
-`sudo apt install make`. Si prefieres no instalarlo, todos los targets son
-envoltorios finos sobre `scripts/`:
-
+ 
+Docker, `k3d` ≥ 5.6, `kubectl`, `Helm` ≥ 3.14, `Terraform` ≥ 1.6. El preflight
+de `make up` los comprueba y enlaza la instalación de lo que falte.
+ 
+También `make`, en una WSL2 recién instalada no lo trae🤓:
+`sudo apt install make`. O usa `scripts/` directamente si pasas de instalaciones extra:
+ 
 | `make` | equivalente |
 | --- | --- |
 | `make up` | `./scripts/up.sh` |
@@ -116,43 +116,31 @@ envoltorios finos sobre `scripts/`:
 | `make validate` | `./scripts/validate.sh` |
 | `make security` | `./scripts/security.sh` |
 | `PROFILE=cpu make up` | `PROFILE=cpu ./scripts/up.sh` |
-
+ 
 16 GiB de RAM y ~60 GiB de disco en perfil GPU; 8 GiB de RAM en CPU.
-
+ 
 ## Posibles mejoras
-
-Lo que tiene sentido añadir sin cambiar la arquitectura base:
-
-- **GPUs no-NVIDIA.** El runtime CUDA es el único punto que ata la plataforma
-  a NVIDIA. Con ROCm (AMD) o CPU offloading (Apple Silicon vía GGML) el cambio
-  es en la imagen de k3s y en el device plugin; el gateway, la caché y el
-  resto no se tocan. Hoy no hay imagen k3s equivalente para ROCm, pero es
-  cuestión de tiempo.
-
-- **Proveedor hosted en el catálogo.** Con todo local el dashboard de FinOps es
-  un ensayo. Un modelo de pago detrás de una variable convierte los
-  presupuestos por departamento en un control real.
-
-- **External Secrets Operator.** El flujo ya tiene la forma correcta: el
-  operador leería el mismo Secrets Manager y mantendría los Secrets
-  sincronizados con rotación sin tener que hacer `terraform apply`.
-
-- **Open WebUI como componente opcional.** Hoy se documenta como un
-  `docker run` de cliente. Meterlo en el app-of-apps con `enabled: false`
-  daría chat con Ingress y clave de departamento sin pasos manuales.
-
-- **Backend de trazas.** El collector ya recibe OTLP de LiteLLM y deriva
-  spanmetrics. Añadir Tempo y su datasource en Grafana permitiría abrir una
-  petición lenta y ver en qué paso se fue el tiempo.
-
-- **Namespaces multi-tenant.** Ahora hay cuotas lógicas en el gateway pero no
-  cuotas de recursos en Kubernetes. Un namespace por departamento con
-  `ResourceQuota` cierra esa brecha.
+ 
+A futuro lo que tiene sentido añadir sin cambiar la arquitectura base:
+ 
+- GPUs no-NVIDIA. Solo cambiaría la imagen de k3s y el device plugin (ROCm en
+  AMD, GGML en Apple Silicon); el resto de la plataforma no se toca.
+- Un proveedor hosted en el catálogo, para que el FinOps deje de ser un
+  ensayo y los presupuestos por departamento controlen dinero real.
+- External Secrets Operator, para sincronizar Secrets desde Secrets Manager
+  con rotación, sin pasar por `terraform apply`.
+- Open WebUI como componente opcional dentro del app-of-apps, en vez del
+  `docker run` suelto de ahora.
+- Tempo como backend de trazas, ya que el collector recibe OTLP de LiteLLM;
+  con su datasource en Grafana se podría ver dónde se va el tiempo en una
+  petición lenta.
+- Un namespace por departamento con `ResourceQuota`, para que las cuotas
+  dejen de ser solo lógicas en el gateway.
 
 ## Documentación
-
+ 
 [docs/](docs/) — arquitectura, decisiones, runbook, guía de conexión para devs.
-
+ 
 ---
 
 <p align="center">
