@@ -72,7 +72,7 @@ pinneada, y afectan a dashboards y al trigger de KEDA
 
 <!-- diagrama de arquitectura (queda diseñarla) -->
 <p align="center">
-  <img src="/home/david/NullNode/docs/media/Arquitectura_NullNode.png"  width="90%">
+  <img src="docs/media/Arquitectura_NullNode.png"  width="90%">
 </p>
 
 Una petición: entra por Traefik → LiteLLM valida la clave del departamento y su
