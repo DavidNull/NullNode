@@ -1,9 +1,6 @@
-# NullNode
+# NullNode <img src="docs/media/nullnode.png" alt="NullNode Logo" width="70" style="vertical-align: middle; margin-left: 10px;">
 
-Plataforma LLMOps completa, privada y local. Un clúster K3s de un nodo sobre tu
-máquina, con las piezas que tendría un despliegue enterprise: gateway con claves
-y "presupuestos por departamento", caché de prompts, autoescalado del pool de
-inferencia, observabilidad de GenAI y todo gestionado por GitOps.
+Plataforma LLMOps enterprise local y privada sobre K3s. Implementa inferencia local de LLMs con escalado dinámico (KEDA), gateway con presupuestos y control de costes (LiteLLM), caché de prompts (Redis), observabilidad dedicada GenAI y despliegue automatizado 100% por GitOps con ArgoCD y Terraform.
 
 Coste: 0 € (solo luz). Todo corre en tu hardware y los servicios de AWS están mockeados.
 

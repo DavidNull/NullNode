@@ -196,7 +196,7 @@ phase_verify() {
 
   local app
   for app in postgres redis ollama litellm; do
-    wait_for "application/${app} to exist" 120 10 \
+    wait_for "application/${app} to exist" 300 10 \
       kube -n argocd get "application/${app}"
   done
 
