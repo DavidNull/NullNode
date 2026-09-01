@@ -13,7 +13,8 @@ GROUP="${1:-all}"
 FAILURES=0
 
 run() {
-  local name="$1"; shift
+  local name="$1"
+  shift
   if "$@" >/tmp/nullnode-validate.log 2>&1; then
     ok "$name"
   else
@@ -36,7 +37,10 @@ CHARTS=(
 
 validate_helm() {
   phase "Helm"
-  require_tool helm || { FAILURES=$((FAILURES + 1)); return; }
+  require_tool helm || {
+    FAILURES=$((FAILURES + 1))
+    return
+  }
 
   local chart
   for chart in "${CHARTS[@]}"; do
@@ -54,14 +58,14 @@ validate_helm() {
   for profile in gpu cpu; do
     run "template platform (${profile} profile)" \
       helm template validate "${REPO_ROOT}/k8s/platform" \
-        -f "${REPO_ROOT}/k8s/platform/values.yaml" \
-        -f "${REPO_ROOT}/k8s/platform/values-${profile}.yaml"
+      -f "${REPO_ROOT}/k8s/platform/values.yaml" \
+      -f "${REPO_ROOT}/k8s/platform/values-${profile}.yaml"
   done
 
   # Presidio changes the gateway config, so render both states.
   run "template litellm (guardrail on)" \
     helm template validate "${REPO_ROOT}/k8s/charts/litellm" \
-      --set guardrails.pii.enabled=true
+    --set guardrails.pii.enabled=true
 
   if command -v kubeconform >/dev/null 2>&1; then
     for chart in "${CHARTS[@]}"; do
@@ -79,7 +83,10 @@ validate_helm() {
 
 validate_terraform() {
   phase "Terraform"
-  require_tool terraform || { FAILURES=$((FAILURES + 1)); return; }
+  require_tool terraform || {
+    FAILURES=$((FAILURES + 1))
+    return
+  }
 
   run "fmt" terraform fmt -check -recursive "${REPO_ROOT}/infra/terraform"
 

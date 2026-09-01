@@ -10,3 +10,6 @@ MD034: false
 # The ADR template starts with an H1 followed by bold metadata, not a heading.
 MD025:
   front_matter_title: ""
+# The README centres its GIFs and the architecture diagram with <p align> and
+# <img>, which Markdown cannot express. Images still carry alt text (MD045).
+MD033: false

@@ -27,8 +27,8 @@ fi
 
 # ------------------------------------------------------------------- workloads
 phase "Workloads"
-not_ready="$(kube get pods -A --no-headers 2>/dev/null \
-  | awk '$4 != "Running" && $4 != "Completed" {print "  " $1 "/" $2 " " $4}')"
+not_ready="$(kube get pods -A --no-headers 2>/dev/null |
+  awk '$4 != "Running" && $4 != "Completed" {print "  " $1 "/" $2 " " $4}')"
 if [[ -z "$not_ready" ]]; then
   ok "every pod is Running or Completed"
 else

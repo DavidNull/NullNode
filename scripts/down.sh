@@ -14,10 +14,19 @@ KEEP_CLOUD_MOCK=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --purge)           PURGE=true; shift ;;
-    --keep-cloud-mock) KEEP_CLOUD_MOCK=true; shift ;;
-    -h|--help)         sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *)                 die "unknown flag: $1 (try --help)" ;;
+    --purge)
+      PURGE=true
+      shift
+      ;;
+    --keep-cloud-mock)
+      KEEP_CLOUD_MOCK=true
+      shift
+      ;;
+    -h | --help)
+      sed -n '2,10p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+    *) die "unknown flag: $1 (try --help)" ;;
   esac
 done
 
@@ -27,7 +36,7 @@ phase "Platform state"
 if [[ -f "${REPO_ROOT}/infra/terraform/platform-bootstrap/terraform.tfstate" ]]; then
   if cluster_exists; then
     log "terraform destroy (platform-bootstrap)"
-    tf platform-bootstrap destroy -input=false -auto-approve || \
+    tf platform-bootstrap destroy -input=false -auto-approve ||
       warn "destroy failed; the cluster removal below makes it moot"
   else
     warn "cluster already gone; discarding stale platform state"
@@ -52,7 +61,7 @@ if [[ "$KEEP_CLOUD_MOCK" == true ]]; then
 else
   if [[ -f "${REPO_ROOT}/infra/terraform/cloud-mock/terraform.tfstate" ]]; then
     log "terraform destroy (cloud-mock)"
-    tf cloud-mock destroy -input=false -auto-approve || \
+    tf cloud-mock destroy -input=false -auto-approve ||
       warn "destroy failed; remove the container by hand: docker rm -f nullnode-localstack"
   else
     ok "no cloud-mock state to remove"
@@ -62,9 +71,9 @@ fi
 phase "Volumes"
 if [[ "$PURGE" == true ]]; then
   warn "removing the model volume - the next boot re-downloads every model"
-  docker volume rm nullnode-storage >/dev/null 2>&1 \
-    && ok "volume nullnode-storage removed" \
-    || ok "volume nullnode-storage was not present"
+  docker volume rm nullnode-storage >/dev/null 2>&1 &&
+    ok "volume nullnode-storage removed" ||
+    ok "volume nullnode-storage was not present"
 else
   if docker volume inspect nullnode-storage >/dev/null 2>&1; then
     ok "model volume kept (use --purge to delete it)"

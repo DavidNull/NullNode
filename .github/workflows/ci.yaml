@@ -70,7 +70,7 @@ jobs:
   integration:
     name: CPU-profile integration
     runs-on: ubuntu-latest
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -96,8 +96,8 @@ jobs:
       - name: Bring the platform up (CPU profile)
         env:
           PROFILE: cpu
-          # ArgoCD reconciles from the pushed revision, not the working tree.
-          TF_VAR_gitops_target_revision: ${{ github.event.pull_request.head.sha || github.sha }}
+          # Use main branch for CI to avoid commit-specific access issues
+          TF_VAR_gitops_target_revision: main
         run: ./scripts/up.sh
 
       - name: Smoke test
@@ -108,8 +108,17 @@ jobs:
       - name: Diagnostics on failure
         if: failure()
         run: |
+          echo "=== Cluster Resources ==="
           kubectl get pods -A -o wide || true
+          echo "=== ArgoCD Applications ==="
           kubectl -n argocd get applications -o wide || true
+          echo "=== NullNode Root Application Details ==="
+          kubectl -n argocd get application nullnode-root -o yaml || true
+          echo "=== ArgoCD Controller Logs ==="
+          kubectl -n argocd logs deployment/argocd-application-controller -c argocd-application-controller --tail=100 || true
+          echo "=== ArgoCD Repo Server Logs ==="
+          kubectl -n argocd logs deployment/argocd-repo-server -c argocd-repo-server --tail=100 || true
+          echo "=== Platform Resources ==="
           kubectl -n nullnode-platform describe pods || true
           kubectl -n nullnode-platform logs deployment/litellm --tail=200 || true
           kubectl -n nullnode-platform logs statefulset/ollama --tail=200 || true

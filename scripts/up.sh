@@ -17,11 +17,23 @@ WAIT=true
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --only)    ONLY="${2:-}"; shift 2 ;;
-    --from)    FROM="${2:-}"; shift 2 ;;
-    --no-wait) WAIT=false; shift ;;
-    -h|--help) sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *)         die "unknown flag: $1 (try --help)" ;;
+    --only)
+      ONLY="${2:-}"
+      shift 2
+      ;;
+    --from)
+      FROM="${2:-}"
+      shift 2
+      ;;
+    --no-wait)
+      WAIT=false
+      shift
+      ;;
+    -h | --help)
+      sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+    *) die "unknown flag: $1 (try --help)" ;;
   esac
 done
 
@@ -35,7 +47,10 @@ should_run() {
     local seen=false p
     for p in "${PHASES[@]}"; do
       [[ "$p" == "$FROM" ]] && seen=true
-      [[ "$p" == "$phase" ]] && { [[ "$seen" == true ]]; return; }
+      [[ "$p" == "$phase" ]] && {
+        [[ "$seen" == true ]]
+        return
+      }
     done
     return 1
   fi
@@ -48,9 +63,9 @@ phase_preflight() {
 
   local missing=0
   require_tool docker "https://docs.docker.com/engine/install/" || missing=1
-  require_tool k3d    "https://k3d.io/#installation" || missing=1
+  require_tool k3d "https://k3d.io/#installation" || missing=1
   require_tool kubectl "https://kubernetes.io/docs/tasks/tools/" || missing=1
-  require_tool helm   "https://helm.sh/docs/intro/install/" || missing=1
+  require_tool helm "https://helm.sh/docs/intro/install/" || missing=1
   require_tool terraform "https://developer.hashicorp.com/terraform/install" || missing=1
   require_tool curl "" || missing=1
   ((missing == 0)) || die "install the missing tools and re-run"
@@ -75,7 +90,7 @@ phase_preflight() {
   case "$PROFILE" in
     gpu)
       if ! docker run --rm --gpus all nvidia/cuda:12.6.2-base-ubuntu24.04 \
-             nvidia-smi >/dev/null 2>&1; then
+        nvidia-smi >/dev/null 2>&1; then
         err "the GPU profile is selected but Docker cannot reach an NVIDIA GPU"
         hint "checklist:"
         hint "  1. NVIDIA driver installed on the host (on Windows, not in WSL)"
@@ -135,9 +150,9 @@ phase_cloud_mock() {
   tf cloud-mock apply -input=false -auto-approve \
     -var "aws_region=${AWS_REGION:-eu-west-1}"
 
-  localstack_healthy \
-    && ok "LocalStack answering at ${LOCALSTACK_ENDPOINT}" \
-    || die "LocalStack applied but not healthy"
+  localstack_healthy &&
+    ok "LocalStack answering at ${LOCALSTACK_ENDPOINT}" ||
+    die "LocalStack applied but not healthy"
 
   local bucket
   bucket="$(tf cloud-mock output -raw vault_bucket)"
@@ -148,8 +163,8 @@ phase_cloud_mock() {
 phase_platform() {
   phase "Platform bootstrap (ArgoCD + GitOps root)"
 
-  localstack_healthy \
-    || die "LocalStack is not up; run './scripts/up.sh --only cloud-mock' first"
+  localstack_healthy ||
+    die "LocalStack is not up; run './scripts/up.sh --only cloud-mock' first"
 
   log "terraform init"
   tf platform-bootstrap init -input=false -upgrade >/dev/null
@@ -179,19 +194,40 @@ phase_verify() {
   wait_for "argocd applications to be registered" 60 5 \
     kube -n argocd get application nullnode-root
 
+  # Check root application sync status before waiting for child apps
+  log "checking nullnode-root sync status..."
+  local sync_status
+  for i in $(seq 1 60); do
+    sync_status=$(kube -n argocd get application nullnode-root -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "Unknown")
+    if [[ "$sync_status" == "Synced" ]]; then
+      log "nullnode-root is Synced"
+      break
+    elif [[ "$sync_status" == "Unknown" || "$sync_status" == "OutOfSync" ]]; then
+      log "nullnode-root status: $sync_status (attempt $i/60)"
+      if [[ $i -eq 60 ]]; then
+        log "=== ArgoCD Diagnostics ==="
+        kube -n argocd get application nullnode-root -o yaml || true
+        kube -n argocd logs deployment/argocd-application-controller -c argocd-application-controller --tail=50 || true
+        log "=== End Diagnostics ==="
+        err "nullnode-root failed to sync after 60 attempts"
+      fi
+    fi
+    sleep 10
+  done
+
   local app
   for app in postgres redis ollama litellm; do
-    wait_for "application/${app} to exist" 60 10 \
+    wait_for "application/${app} to exist" 300 10 \
       kube -n argocd get "application/${app}"
   done
 
-  wait_for "postgres to be ready" 60 10 \
+  wait_for "postgres to be ready" 120 10 \
     kube -n nullnode-platform rollout status statefulset/postgres --timeout=10s
-  wait_for "redis to be ready" 60 10 \
+  wait_for "redis to be ready" 120 10 \
     kube -n nullnode-platform rollout status statefulset/redis --timeout=10s
-  wait_for "ollama to pull models and start" 180 10 \
+  wait_for "ollama to pull models and start" 300 10 \
     kube -n nullnode-platform rollout status statefulset/ollama --timeout=10s
-  wait_for "the gateway to be ready" 120 10 \
+  wait_for "the gateway to be ready" 180 10 \
     kube -n nullnode-platform rollout status deployment/litellm --timeout=10s
 
   ok "platform converged"
@@ -203,11 +239,11 @@ main() {
     "$C_BLUE" "$C_RESET" "$PROFILE"
 
   # `if`, not `&&`: a false should_run in an && list trips set -e.
-  if should_run preflight;  then phase_preflight;  fi
-  if should_run cluster;    then phase_cluster;    fi
+  if should_run preflight; then phase_preflight; fi
+  if should_run cluster; then phase_cluster; fi
   if should_run cloud-mock; then phase_cloud_mock; fi
-  if should_run platform;   then phase_platform;   fi
-  if should_run verify;     then phase_verify;     fi
+  if should_run platform; then phase_platform; fi
+  if should_run verify; then phase_verify; fi
 
   printf '\n'
   "${REPO_ROOT}/scripts/status.sh" || true

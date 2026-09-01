@@ -45,7 +45,7 @@ for pin in "${PINS[@]}"; do
 done
 
 printf '\n'
-if (( FAILURES > 0 )); then
+if ((FAILURES > 0)); then
   die "${FAILURES} pinned version(s) are wrong - fix k8s/platform/values.yaml"
 fi
 ok "every pinned chart version resolves"

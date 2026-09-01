@@ -11,9 +11,12 @@ variable "aws_region" {
 }
 
 variable "localstack_image" {
+  # 4.x is required: the AWS provider (~> 5.70 resolves to 5.100) waits for the
+  # S3 lifecycle configuration to stabilise, and LocalStack 3.8.1 never reports
+  # it ready, so `terraform apply` hangs and fails. See docs/ops/VERSIONS.md.
   description = "LocalStack image. Pinned on purpose - see docs/ops/VERSIONS.md."
   type        = string
-  default     = "localstack/localstack:3.8.1"
+  default     = "localstack/localstack:4.4.0"
 }
 
 variable "localstack_port" {

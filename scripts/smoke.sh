@@ -10,7 +10,8 @@ MODEL="${MODEL:-llama3.2}"
 FAILURES=0
 
 check() {
-  local name="$1"; shift
+  local name="$1"
+  shift
   if "$@"; then
     ok "$name"
   else
@@ -52,16 +53,16 @@ fi
 # 3. Model catalogue.
 check "model catalogue reachable" \
   curl -fsS --max-time 10 "${GATEWAY}/v1/models" \
-    -H "Authorization: Bearer ${KEY}" -o /dev/null
+  -H "Authorization: Bearer ${KEY}" -o /dev/null
 
 # 4. A real completion. Long timeout: a cold model load is slow.
 log "requesting a completion from ${MODEL} (cold start can take a minute)"
 payload='{"model":"'"${MODEL}"'","messages":[{"role":"user","content":"Reply with the single word: pong"}],"max_tokens":16,"temperature":0}'
 first_response="$(mktemp)"
 if curl -fsS --max-time 300 -X POST "${GATEWAY}/v1/chat/completions" \
-     -H "Authorization: Bearer ${KEY}" \
-     -H 'Content-Type: application/json' \
-     -d "$payload" -o "$first_response"; then
+  -H "Authorization: Bearer ${KEY}" \
+  -H 'Content-Type: application/json' \
+  -d "$payload" -o "$first_response"; then
   ok "completion returned"
   hint "$(head -c 300 "$first_response")"
 else
@@ -78,8 +79,8 @@ curl -fsS --max-time 300 -X POST "${GATEWAY}/v1/chat/completions" \
   -H 'Content-Type: application/json' \
   -d "$payload" -o /dev/null || FAILURES=$((FAILURES + 1))
 t1=$(date +%s%N)
-elapsed_ms=$(( (t1 - t0) / 1000000 ))
-if (( elapsed_ms < 1000 )); then
+elapsed_ms=$(((t1 - t0) / 1000000))
+if ((elapsed_ms < 1000)); then
   ok "cache hit (${elapsed_ms} ms)"
 else
   warn "replay took ${elapsed_ms} ms - likely a cache miss"
@@ -92,8 +93,8 @@ check "gateway exports prometheus metrics" \
 
 # 7. The audit trail reached the mocked S3 bucket.
 log "checking the audit log in the mocked S3 bucket"
-if curl -fsS --max-time 10 "${LOCALSTACK_ENDPOINT}/nullnode-model-vault?list-type=2&prefix=audit" \
-     | grep -q '<Key>'; then
+if curl -fsS --max-time 10 "${LOCALSTACK_ENDPOINT}/nullnode-model-vault?list-type=2&prefix=audit" |
+  grep -q '<Key>'; then
   ok "audit objects present in s3://nullnode-model-vault/audit"
 else
   warn "no audit objects yet - LiteLLM flushes the s3 callback asynchronously"
@@ -102,7 +103,7 @@ fi
 rm -f "$first_response"
 
 printf '\n'
-if (( FAILURES > 0 )); then
+if ((FAILURES > 0)); then
   die "${FAILURES} smoke check(s) failed"
 fi
 ok "all smoke checks passed"

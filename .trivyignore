@@ -16,3 +16,15 @@ AVD-AWS-0094
 # AVD-DS-0002: the CUDA k3s image runs as root. k3s needs it - it manages
 # containerd, CNI and kubelet inside the node container.
 AVD-DS-0002
+
+# --- rendered manifests (scanned from the repo root, same ignore file) --------
+
+# AVD-KSV-0014: readOnlyRootFilesystem is deliberately not enforced - the model
+# runtime and the gateway touch more of the filesystem than is worth auditing
+# in a local lab. Mirrors the no-read-only-root-fs exclusion in .kube-linter.yaml.
+AVD-KSV-0014
+
+# AVD-KSV-0109: false positive. The LiteLLM ConfigMap keys named "password" hold
+# os.environ/... references read at runtime from a Secret-backed env var, not
+# secret values.
+AVD-KSV-0109

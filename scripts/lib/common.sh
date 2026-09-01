@@ -23,19 +23,31 @@ INGRESS_HOSTS=(
 readonly INGRESS_HOSTS
 
 if [[ -t 1 ]]; then
-  C_RESET=$'\033[0m'; C_RED=$'\033[0;31m'; C_GREEN=$'\033[0;32m'
-  C_YELLOW=$'\033[0;33m'; C_BLUE=$'\033[0;34m'; C_DIM=$'\033[2m'
+  C_RESET=$'\033[0m'
+  C_RED=$'\033[0;31m'
+  C_GREEN=$'\033[0;32m'
+  C_YELLOW=$'\033[0;33m'
+  C_BLUE=$'\033[0;34m'
+  C_DIM=$'\033[2m'
 else
-  C_RESET=''; C_RED=''; C_GREEN=''; C_YELLOW=''; C_BLUE=''; C_DIM=''
+  C_RESET=''
+  C_RED=''
+  C_GREEN=''
+  C_YELLOW=''
+  C_BLUE=''
+  C_DIM=''
 fi
 readonly C_RESET C_RED C_GREEN C_YELLOW C_BLUE C_DIM
 
-log()   { printf '%s==>%s %s\n' "$C_BLUE" "$C_RESET" "$*"; }
-ok()    { printf '%s  ok%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
-warn()  { printf '%swarn%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
-err()   { printf '%s fail%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
-hint()  { printf '%s     %s%s\n' "$C_DIM" "$*" "$C_RESET"; }
-die()   { err "$*"; exit 1; }
+log() { printf '%s==>%s %s\n' "$C_BLUE" "$C_RESET" "$*"; }
+ok() { printf '%s  ok%s %s\n' "$C_GREEN" "$C_RESET" "$*"; }
+warn() { printf '%swarn%s %s\n' "$C_YELLOW" "$C_RESET" "$*" >&2; }
+err() { printf '%s fail%s %s\n' "$C_RED" "$C_RESET" "$*" >&2; }
+hint() { printf '%s     %s%s\n' "$C_DIM" "$*" "$C_RESET"; }
+die() {
+  err "$*"
+  exit 1
+}
 
 phase() {
   printf '\n%s┌─ %s%s\n' "$C_BLUE" "$*" "$C_RESET"
@@ -75,18 +87,20 @@ kube() {
 
 # Keeps -chdir consistent across callers.
 tf() {
-  local stack="$1"; shift
+  local stack="$1"
+  shift
   TF_IN_AUTOMATION=1 terraform -chdir="${REPO_ROOT}/infra/terraform/${stack}" "$@"
 }
 
 localstack_healthy() {
-  curl -fsS --max-time 5 "${LOCALSTACK_ENDPOINT}/_localstack/health" 2>/dev/null \
-    | grep -q '"s3"'
+  curl -fsS --max-time 5 "${LOCALSTACK_ENDPOINT}/_localstack/health" 2>/dev/null |
+    grep -q '"s3"'
 }
 
 # Poll a command until it succeeds.
 wait_for() {
-  local description="$1" attempts="$2" delay="$3"; shift 3
+  local description="$1" attempts="$2" delay="$3"
+  shift 3
   local i
   for ((i = 1; i <= attempts; i++)); do
     if "$@" >/dev/null 2>&1; then
