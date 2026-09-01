@@ -196,17 +196,17 @@ phase_verify() {
 
   local app
   for app in postgres redis ollama litellm; do
-    wait_for "application/${app} to exist" 60 10 \
+    wait_for "application/${app} to exist" 120 10 \
       kube -n argocd get "application/${app}"
   done
 
-  wait_for "postgres to be ready" 60 10 \
+  wait_for "postgres to be ready" 120 10 \
     kube -n nullnode-platform rollout status statefulset/postgres --timeout=10s
-  wait_for "redis to be ready" 60 10 \
+  wait_for "redis to be ready" 120 10 \
     kube -n nullnode-platform rollout status statefulset/redis --timeout=10s
-  wait_for "ollama to pull models and start" 180 10 \
+  wait_for "ollama to pull models and start" 300 10 \
     kube -n nullnode-platform rollout status statefulset/ollama --timeout=10s
-  wait_for "the gateway to be ready" 120 10 \
+  wait_for "the gateway to be ready" 180 10 \
     kube -n nullnode-platform rollout status deployment/litellm --timeout=10s
 
   ok "platform converged"
