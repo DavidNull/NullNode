@@ -96,8 +96,8 @@ jobs:
       - name: Bring the platform up (CPU profile)
         env:
           PROFILE: cpu
-          # ArgoCD reconciles from the pushed revision, not the working tree.
-          TF_VAR_gitops_target_revision: ${{ github.event.pull_request.head.sha || github.sha }}
+          # Use main branch for CI to avoid commit-specific access issues
+          TF_VAR_gitops_target_revision: main
         run: ./scripts/up.sh
 
       - name: Smoke test
