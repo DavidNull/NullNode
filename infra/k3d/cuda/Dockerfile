@@ -14,6 +14,9 @@ ARG NVIDIA_CONTAINER_TOOLKIT_VERSION=1.17.0
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+# curl and gnupg are transient build deps used only to add the NVIDIA repo and
+# removed with the apt lists below; pinning them breaks on every base refresh.
+# hadolint ignore=DL3008
 RUN apt-get update \
  && apt-get install -y --no-install-recommends ca-certificates=20230311 curl gnupg \
  && curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey \

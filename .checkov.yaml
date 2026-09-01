@@ -22,6 +22,15 @@ skip-check:
   # S3 event notifications / lifecycle on all prefixes: the lifecycle rule is
   # deliberately scoped to audit/ only.
   - CKV2_AWS_61
+  # S3 event notifications need an SNS/SQS/Lambda target; there is none on the
+  # mock and nothing consumes bucket events in the lab.
+  - CKV2_AWS_62
+  # Abort-incomplete-multipart lifecycle: adding a second lifecycle rule is what
+  # makes LocalStack's lifecycle API hang in CI, and it buys nothing on a mock.
+  - CKV_AWS_300
+  # Secrets Manager automatic rotation needs a rotation Lambda, which LocalStack
+  # Community does not run. Rotation is covered by the ADR-0005 flow instead.
+  - CKV2_AWS_57
   # --- local lab -----------------------------------------------------------
   # Provider version pinning is done in versions.tf with ~> constraints, which
   # Checkov does not always recognise.

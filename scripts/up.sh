@@ -17,11 +17,23 @@ WAIT=true
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
-    --only)    ONLY="${2:-}"; shift 2 ;;
-    --from)    FROM="${2:-}"; shift 2 ;;
-    --no-wait) WAIT=false; shift ;;
-    -h|--help) sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
-    *)         die "unknown flag: $1 (try --help)" ;;
+    --only)
+      ONLY="${2:-}"
+      shift 2
+      ;;
+    --from)
+      FROM="${2:-}"
+      shift 2
+      ;;
+    --no-wait)
+      WAIT=false
+      shift
+      ;;
+    -h | --help)
+      sed -n '2,14p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      exit 0
+      ;;
+    *) die "unknown flag: $1 (try --help)" ;;
   esac
 done
 
@@ -35,7 +47,10 @@ should_run() {
     local seen=false p
     for p in "${PHASES[@]}"; do
       [[ "$p" == "$FROM" ]] && seen=true
-      [[ "$p" == "$phase" ]] && { [[ "$seen" == true ]]; return; }
+      [[ "$p" == "$phase" ]] && {
+        [[ "$seen" == true ]]
+        return
+      }
     done
     return 1
   fi
@@ -48,9 +63,9 @@ phase_preflight() {
 
   local missing=0
   require_tool docker "https://docs.docker.com/engine/install/" || missing=1
-  require_tool k3d    "https://k3d.io/#installation" || missing=1
+  require_tool k3d "https://k3d.io/#installation" || missing=1
   require_tool kubectl "https://kubernetes.io/docs/tasks/tools/" || missing=1
-  require_tool helm   "https://helm.sh/docs/intro/install/" || missing=1
+  require_tool helm "https://helm.sh/docs/intro/install/" || missing=1
   require_tool terraform "https://developer.hashicorp.com/terraform/install" || missing=1
   require_tool curl "" || missing=1
   ((missing == 0)) || die "install the missing tools and re-run"
@@ -75,7 +90,7 @@ phase_preflight() {
   case "$PROFILE" in
     gpu)
       if ! docker run --rm --gpus all nvidia/cuda:12.6.2-base-ubuntu24.04 \
-             nvidia-smi >/dev/null 2>&1; then
+        nvidia-smi >/dev/null 2>&1; then
         err "the GPU profile is selected but Docker cannot reach an NVIDIA GPU"
         hint "checklist:"
         hint "  1. NVIDIA driver installed on the host (on Windows, not in WSL)"
@@ -135,9 +150,9 @@ phase_cloud_mock() {
   tf cloud-mock apply -input=false -auto-approve \
     -var "aws_region=${AWS_REGION:-eu-west-1}"
 
-  localstack_healthy \
-    && ok "LocalStack answering at ${LOCALSTACK_ENDPOINT}" \
-    || die "LocalStack applied but not healthy"
+  localstack_healthy &&
+    ok "LocalStack answering at ${LOCALSTACK_ENDPOINT}" ||
+    die "LocalStack applied but not healthy"
 
   local bucket
   bucket="$(tf cloud-mock output -raw vault_bucket)"
@@ -148,8 +163,8 @@ phase_cloud_mock() {
 phase_platform() {
   phase "Platform bootstrap (ArgoCD + GitOps root)"
 
-  localstack_healthy \
-    || die "LocalStack is not up; run './scripts/up.sh --only cloud-mock' first"
+  localstack_healthy ||
+    die "LocalStack is not up; run './scripts/up.sh --only cloud-mock' first"
 
   log "terraform init"
   tf platform-bootstrap init -input=false -upgrade >/dev/null
@@ -203,11 +218,11 @@ main() {
     "$C_BLUE" "$C_RESET" "$PROFILE"
 
   # `if`, not `&&`: a false should_run in an && list trips set -e.
-  if should_run preflight;  then phase_preflight;  fi
-  if should_run cluster;    then phase_cluster;    fi
+  if should_run preflight; then phase_preflight; fi
+  if should_run cluster; then phase_cluster; fi
   if should_run cloud-mock; then phase_cloud_mock; fi
-  if should_run platform;   then phase_platform;   fi
-  if should_run verify;     then phase_verify;     fi
+  if should_run platform; then phase_platform; fi
+  if should_run verify; then phase_verify; fi
 
   printf '\n'
   "${REPO_ROOT}/scripts/status.sh" || true

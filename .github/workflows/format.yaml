@@ -40,7 +40,7 @@ jobs:
           sudo install -m 0755 /tmp/hadolint /usr/local/bin/hadolint
           # markdownlint
           npm install -g markdownlint-cli2@0.14.0
-          # shellcheck
+          # install the shellcheck linter
           sudo apt-get update && sudo apt-get install -y shellcheck
 
       - name: Check formatting

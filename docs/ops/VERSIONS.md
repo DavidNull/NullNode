@@ -46,7 +46,7 @@ red.
 | `quay.io/prometheuscommunity/postgres-exporter` | `v0.15.0` | chart postgres |
 | `mcr.microsoft.com/presidio-analyzer` | `2.2.355` | chart presidio |
 | `mcr.microsoft.com/presidio-anonymizer` | `2.2.355` | chart presidio |
-| `localstack/localstack` | `3.8.1` | cloud-mock |
+| `localstack/localstack` | `4.4.0` | cloud-mock |
 | `rancher/k3s` | `v1.31.2-k3s1` | perfil CPU / base de la imagen CUDA |
 | `python` | `3.12-alpine` | Job de bootstrap |
 
@@ -67,3 +67,13 @@ kubectl -n nullnode-platform exec deploy/litellm -- \
 
 Comparar con las expresiones de `k8s/charts/nullnode-observability/` (paneles y
 reglas de grabación) y con el trigger de KEDA en el values de Ollama.
+
+### LocalStack: por qué 4.x y no 3.8.1
+
+El provider de AWS (`~> 5.70`, que resuelve a 5.100) espera a que la
+configuración de lifecycle de S3 quede "estable" antes de dar por creado el
+recurso. LocalStack 3.8.1 nunca reporta ese estado, así que
+`aws_s3_bucket_lifecycle_configuration.vault` se cuelga y `terraform apply`
+falla a los 3 minutos — era lo que tumbaba el job de integración en CI. Con
+`4.4.0` el recurso se crea en ~1 min. Si se baja el pin de LocalStack, hay que
+bajar también el del provider a una versión previa a esa espera.

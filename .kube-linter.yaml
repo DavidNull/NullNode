@@ -16,5 +16,35 @@ checks:
     - dangling-service
     # Latest tags are already blocked by the pinning policy in docs/ops/VERSIONS.md
     - unset-memory-requirements
+    # Same reason as no-anti-affinity: a single node makes node affinity moot.
+    - no-node-affinity
+    # Single-node lab: three replicas do not fit and add nothing to test.
+    - minimum-three-replicas
+    - hpa-minimum-three-replicas
+    # StatefulSets (redis, ollama, postgres) and the one-shot bootstrap Job do
+    # not use a Deployment rolling strategy; on a single node it changes nothing.
+    - no-rolling-update-strategy
+    # NetworkPolicies are written but disabled by default (see docs/context and
+    # k8s/charts/redis/templates/networkpolicy.yaml). Turned on one at a time.
+    - non-isolated-pod
+    # Owner/email metadata is org policy that this local lab does not carry.
+    - required-label-owner
+    - required-annotation-email
+    # helm template renders without a namespace; the namespaces are created by
+    # Terraform (platform-bootstrap), same reason default-service-account is off.
+    - use-namespace
+    # The datastores take their password through a secretKeyRef env var, which is
+    # how the upstream images expect it. Rewriting them to file mounts is out of
+    # scope for the lab.
+    - read-secret-from-env-var
+    # False positive: DEPARTMENT_KEYS_SECRET_ID is the Secrets Manager secret id
+    # the bootstrap Job writes to, not a secret value.
+    - env-var-secret
+    # Cluster default DNS is what every pod here should use.
+    - dnsconfig-options
+    # Fires on the one-shot bootstrap Job and on metrics-exporter sidecars, where
+    # a probe adds noise rather than signal.
+    - no-liveness-probe
+    - no-readiness-probe
 
 customChecks: []

@@ -21,7 +21,8 @@ REPORTS="${REPO_ROOT}/reports"
 RENDERED="${REPORTS}/rendered"
 
 run() {
-  local name="$1"; shift
+  local name="$1"
+  shift
   if "$@" >"${REPORTS}/last.log" 2>&1; then
     ok "$name"
   else
@@ -50,7 +51,7 @@ render_manifests() {
   local chart name
   for chart in "${REPO_ROOT}"/k8s/charts/*; do
     name="$(basename "$chart")"
-    if ! helm template "$name" "$chart" > "${RENDERED}/${name}.yaml" 2>/dev/null; then
+    if ! helm template "$name" "$chart" >"${RENDERED}/${name}.yaml" 2>/dev/null; then
       err "could not render ${name}"
       FAILURES=$((FAILURES + 1))
       return 1
@@ -60,7 +61,7 @@ render_manifests() {
   # Presidio enabled changes the gateway's config and env.
   helm template litellm "${REPO_ROOT}/k8s/charts/litellm" \
     --set guardrails.pii.enabled=true \
-    > "${RENDERED}/litellm-guardrail.yaml" 2>/dev/null
+    >"${RENDERED}/litellm-guardrail.yaml" 2>/dev/null
 
   ok "rendered $(find "$RENDERED" -name '*.yaml' | wc -l | tr -d ' ') manifest set(s)"
 }
@@ -174,11 +175,11 @@ check_format() {
 mkdir -p "$REPORTS"
 
 case "$GROUP" in
-  iac)       scan_iac ;;
+  iac) scan_iac ;;
   manifests) scan_manifests ;;
-  secrets)   scan_secrets ;;
-  images)    scan_images ;;
-  format)    check_format ;;
+  secrets) scan_secrets ;;
+  images) scan_images ;;
+  format) check_format ;;
   all)
     scan_iac
     scan_manifests
@@ -190,7 +191,7 @@ esac
 
 rm -f "${REPORTS}/last.log"
 printf '\n'
-if (( FAILURES > 0 )); then
+if ((FAILURES > 0)); then
   die "${FAILURES} scan(s) failed"
 fi
 ok "all scans passed"

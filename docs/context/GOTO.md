@@ -22,6 +22,16 @@ Nada de esto se ha ejecutado. Orden de comprobación:
 
 ## Siguiente: cerrar lo que está a medias
 
+- [ ] **Fijar las versiones de los escáneres en CI.** `trivy`, `shellcheck` y
+      `checkov` se instalan como *latest* (apt/pip) en los workflows. Cada release
+      nueva puede meter reglas que ponen el gate en rojo sin tocar una línea de
+      código — ya pasó con KSV-0014/0109, DS-0002 y AWS-0132 al subir Trivy.
+      Pinnearlos (como ya se hace con las imágenes) hace el pipeline determinista.
+- [ ] **Confirmar el test de integración en CI.** El blocker estaba en el mock:
+      LocalStack 3.8.1 colgaba `aws_s3_bucket_lifecycle_configuration` contra el
+      provider AWS 5.100. Subido a 4.4.0 (ver VERSIONS.md), el `apply` pasa en
+      local. Falta verlo verde en CI tras el push — recordar que ArgoCD reconcilia
+      desde el SHA pusheado, no desde el working tree.
 - [ ] **Backend de trazas.** El collector recibe OTLP y deriva spanmetrics, pero
       las trazas mueren en el exporter `debug`. Añadir Tempo y su datasource en
       Grafana para poder abrir una petición lenta y ver dónde se fue el tiempo.
