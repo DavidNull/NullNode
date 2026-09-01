@@ -194,6 +194,27 @@ phase_verify() {
   wait_for "argocd applications to be registered" 60 5 \
     kube -n argocd get application nullnode-root
 
+  # Check root application sync status before waiting for child apps
+  log "checking nullnode-root sync status..."
+  local sync_status
+  for i in $(seq 1 30); do
+    sync_status=$(kube -n argocd get application nullnode-root -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "Unknown")
+    if [[ "$sync_status" == "Synced" ]]; then
+      log "nullnode-root is Synced"
+      break
+    elif [[ "$sync_status" == "Unknown" || "$sync_status" == "OutOfSync" ]]; then
+      log "nullnode-root status: $sync_status (attempt $i/30)"
+      if [[ $i -eq 30 ]]; then
+        log "=== ArgoCD Diagnostics ==="
+        kube -n argocd get application nullnode-root -o yaml || true
+        kube -n argocd logs deployment/argocd-application-controller -c argocd-application-controller --tail=50 || true
+        log "=== End Diagnostics ==="
+        err "nullnode-root failed to sync after 30 attempts"
+      fi
+    fi
+    sleep 10
+  done
+
   local app
   for app in postgres redis ollama litellm; do
     wait_for "application/${app} to exist" 300 10 \

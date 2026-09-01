@@ -108,8 +108,17 @@ jobs:
       - name: Diagnostics on failure
         if: failure()
         run: |
+          echo "=== Cluster Resources ==="
           kubectl get pods -A -o wide || true
+          echo "=== ArgoCD Applications ==="
           kubectl -n argocd get applications -o wide || true
+          echo "=== NullNode Root Application Details ==="
+          kubectl -n argocd get application nullnode-root -o yaml || true
+          echo "=== ArgoCD Controller Logs ==="
+          kubectl -n argocd logs deployment/argocd-application-controller -c argocd-application-controller --tail=100 || true
+          echo "=== ArgoCD Repo Server Logs ==="
+          kubectl -n argocd logs deployment/argocd-repo-server -c argocd-repo-server --tail=100 || true
+          echo "=== Platform Resources ==="
           kubectl -n nullnode-platform describe pods || true
           kubectl -n nullnode-platform logs deployment/litellm --tail=200 || true
           kubectl -n nullnode-platform logs statefulset/ollama --tail=200 || true
