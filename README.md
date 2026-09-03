@@ -20,6 +20,7 @@ Todo mockeado: AWS, S3, Bedrock, etc.
 <p align="center">
   <img src="docs/media/mockeado.png" alt="Servicios AWS mockeados en NullNode" width="80%">
 </p>
+
 ---
 
 ## Antes de arrancar
