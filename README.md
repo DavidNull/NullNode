@@ -18,7 +18,7 @@ make smoke
 
 Todo mockeado: AWS, S3, Bedrock, etc.
 <p align="center">
-  <img src="docs/media/mockeado.png" width="80%">
+  <img src="docs/media/mockeado.png" alt="Servicios AWS mockeados en NullNode" width="80%">
 </p>
 ---
 
@@ -98,7 +98,6 @@ petición completa en S3.
 <p align="center">
   <img src="docs/media/grafana.png" alt="Dashboards de Grafana: GenAI, gasto y VRAM" width="80%">
 </p>
-
 
 ## Requisitos
 
