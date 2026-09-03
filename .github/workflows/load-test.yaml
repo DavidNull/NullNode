@@ -1,7 +1,5 @@
 name: Load test
 
-# Not part of CI: this needs a converged platform and takes ~10 minutes of
-# sustained inference. Run it against a lab on demand.
 on:
   workflow_dispatch:
     inputs:
