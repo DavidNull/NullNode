@@ -16,6 +16,10 @@ make smoke
   <img src="docs/media/deploy.gif" alt="Despliegue de NullNode en consola, make up de principio a fin" width="80%">
 </p>
 
+Todo mockeado: AWS, S3, Bedrock, etc.
+<p align="center">
+  <img src="docs/media/mockeado.png" width="80%">
+</p>
 ---
 
 ## Antes de arrancar
@@ -90,11 +94,11 @@ petición completa en S3.
 | GitOps | ArgoCD | App-of-apps con sync waves, un solo Application raíz. |
 | IaC | Terraform, k3d | Dos stacks: cloud mockeado y bootstrap de la plataforma. |
 
-<!-- GIF: Grafana (GenAI, gasto, VRAM)
+<br>
 <p align="center">
-  <img src="docs/media/dashboards.gif" alt="Dashboards de Grafana: GenAI, gasto y VRAM" width="80%">
+  <img src="docs/media/grafana.png" alt="Dashboards de Grafana: GenAI, gasto y VRAM" width="80%">
 </p>
--->
+
 
 ## Requisitos
 
