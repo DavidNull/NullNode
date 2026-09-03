@@ -1,6 +1,8 @@
 name: CI
 
 on:
+  push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -62,8 +64,61 @@ jobs:
       - run: ./scripts/validate.sh yaml
       - run: ./scripts/validate.sh python
 
+  core-integration:
+    name: Core integration (datastores + GitOps sync)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: azure/setup-helm@v4
+        with:
+          version: v3.16.2
+
+      - uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.9.8
+          terraform_wrapper: false
+
+      - name: Install k3d
+        run: curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.7.4 bash
+
+      # Datastores + GitOps sync only (CORE_ONLY): no ollama, gateway or the
+      # full observability stack, so this fits a standard hosted runner. The
+      # heavy end-to-end lives in the workflow_dispatch `integration` job.
+      - name: Bring up the core (CPU profile, datastores only)
+        env:
+          PROFILE: cpu
+          CORE_ONLY: "true"
+          TF_VAR_gitops_target_revision: main
+        run: ./scripts/up.sh
+
+      - name: Diagnostics on failure
+        if: failure()
+        run: |
+          echo "=== Cluster Resources ==="
+          kubectl get pods -A -o wide || true
+          echo "=== ArgoCD Applications ==="
+          kubectl -n argocd get applications -o wide || true
+          echo "=== NullNode Root Application Details ==="
+          kubectl -n argocd get application nullnode-root -o yaml || true
+          echo "=== ArgoCD Controller Logs ==="
+          kubectl -n argocd logs deployment/argocd-application-controller -c argocd-application-controller --tail=100 || true
+          echo "=== ArgoCD Repo Server Logs ==="
+          kubectl -n argocd logs deployment/argocd-repo-server -c argocd-repo-server --tail=100 || true
+          echo "=== Datastore Resources ==="
+          kubectl -n nullnode-platform describe pods || true
+
+      - name: Tear down
+        if: always()
+        run: ./scripts/down.sh --purge || true
+
   integration:
-    name: CPU-profile integration
+    name: Full CPU-profile integration (manual)
+    # Heavy end-to-end: pulls several GiB of images plus a model and needs
+    # ~4 CPU of requests (ollama alone asks for 2). Too much for the standard
+    # push/PR runner, so it is opt-in via the Actions "Run workflow" button.
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

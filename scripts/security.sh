@@ -135,7 +135,7 @@ scan_images() {
     "redis:7.4-alpine"
     "postgres:16.4-alpine"
     "python:3.12-alpine"
-    "localstack/localstack:3.8.1"
+    "localstack/localstack:4.4.0"
     "oliver006/redis_exporter:v1.66.0"
   )
   local image

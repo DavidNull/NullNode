@@ -10,6 +10,10 @@ platform:
   profile: gpu
   # Host suffix for every Ingress the platform creates.
   hostSuffix: nullnode.localhost
+  # coreOnly: deploy datastores + GitOps sync only, skipping the heavy compute
+  # (ollama, gateway) and the full observability stack. Used by the CI
+  # core-integration job so it fits a small runner. See .github/workflows/ci.yaml.
+  coreOnly: false
 
 argocd:
   namespace: argocd

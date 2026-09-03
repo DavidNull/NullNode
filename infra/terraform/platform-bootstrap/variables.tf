@@ -68,3 +68,9 @@ variable "host_suffix" {
   type        = string
   default     = "nullnode.localhost"
 }
+
+variable "core_only" {
+  description = "Deploy datastores + GitOps sync only, skipping heavy compute and the observability stack. Used by the CI core-integration job."
+  type        = bool
+  default     = false
+}
