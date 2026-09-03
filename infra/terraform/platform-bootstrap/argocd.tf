@@ -114,6 +114,7 @@ resource "helm_release" "nullnode_root" {
     platform = {
       profile    = var.hardware_profile
       hostSuffix = var.host_suffix
+      coreOnly   = var.core_only
     }
     argocd = {
       namespace = kubernetes_namespace_v1.argocd.metadata[0].name

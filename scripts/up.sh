@@ -173,7 +173,8 @@ phase_platform() {
   tf platform-bootstrap apply -input=false -auto-approve \
     -var "hardware_profile=${PROFILE}" \
     -var "host_suffix=${HOST_SUFFIX}" \
-    -var "kube_context=${KUBE_CONTEXT}"
+    -var "kube_context=${KUBE_CONTEXT}" \
+    -var "core_only=${CORE_ONLY:-false}"
 
   ok "ArgoCD installed and the root Application is registered"
 }
@@ -194,30 +195,45 @@ phase_verify() {
   wait_for "argocd applications to be registered" 60 5 \
     kube -n argocd get application nullnode-root
 
-  # Check root application sync status before waiting for child apps
+  # Check root application sync status before waiting for child apps.
+  # 90 attempts × 10 s = 15 min; a cold cluster pulling images needs that long.
   log "checking nullnode-root sync status..."
   local sync_status
-  for i in $(seq 1 60); do
-    sync_status=$(kube -n argocd get application nullnode-root -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "Unknown")
+  local synced=false
+  for i in $(seq 1 90); do
+    sync_status=$(kube -n argocd get application nullnode-root \
+      -o jsonpath='{.status.sync.status}' 2>/dev/null || true)
     if [[ "$sync_status" == "Synced" ]]; then
       log "nullnode-root is Synced"
+      synced=true
       break
-    elif [[ "$sync_status" == "Unknown" || "$sync_status" == "OutOfSync" ]]; then
-      log "nullnode-root status: $sync_status (attempt $i/60)"
-      if [[ $i -eq 60 ]]; then
-        log "=== ArgoCD Diagnostics ==="
-        kube -n argocd get application nullnode-root -o yaml || true
-        kube -n argocd logs deployment/argocd-application-controller -c argocd-application-controller --tail=50 || true
-        log "=== End Diagnostics ==="
-        err "nullnode-root failed to sync after 60 attempts"
-      fi
+    else
+      log "nullnode-root sync.status=${sync_status:-<pending>} (attempt $i/90)"
     fi
     sleep 10
   done
 
+  if [[ "$synced" != true ]]; then
+    log "=== ArgoCD Diagnostics ==="
+    kube -n argocd get application nullnode-root -o yaml || true
+    kube -n argocd logs deployment/argocd-application-controller \
+      -c argocd-application-controller --tail=100 || true
+    kube -n argocd logs deployment/argocd-repo-server \
+      -c argocd-repo-server --tail=100 || true
+    log "=== End Diagnostics ==="
+    die "nullnode-root did not reach Synced after 90 attempts (15 min)"
+  fi
+
+  # nullnode-root already Synced, so child Applications should appear quickly.
+  # CORE_ONLY skips the heavy compute (ollama, gateway) so a small CI runner
+  # can still exercise the GitOps sync and the datastores.
+  local apps=(postgres redis ollama litellm)
+  if [[ "${CORE_ONLY:-false}" == "true" ]]; then
+    apps=(postgres redis)
+  fi
   local app
-  for app in postgres redis ollama litellm; do
-    wait_for "application/${app} to exist" 300 10 \
+  for app in "${apps[@]}"; do
+    wait_for "application/${app} to exist" 60 10 \
       kube -n argocd get "application/${app}"
   done
 
@@ -225,10 +241,13 @@ phase_verify() {
     kube -n nullnode-platform rollout status statefulset/postgres --timeout=10s
   wait_for "redis to be ready" 120 10 \
     kube -n nullnode-platform rollout status statefulset/redis --timeout=10s
-  wait_for "ollama to pull models and start" 300 10 \
-    kube -n nullnode-platform rollout status statefulset/ollama --timeout=10s
-  wait_for "the gateway to be ready" 180 10 \
-    kube -n nullnode-platform rollout status deployment/litellm --timeout=10s
+
+  if [[ "${CORE_ONLY:-false}" != "true" ]]; then
+    wait_for "ollama to pull models and start" 300 10 \
+      kube -n nullnode-platform rollout status statefulset/ollama --timeout=10s
+    wait_for "the gateway to be ready" 180 10 \
+      kube -n nullnode-platform rollout status deployment/litellm --timeout=10s
+  fi
 
   ok "platform converged"
 }

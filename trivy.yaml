@@ -1,23 +1,17 @@
-# Trivy defaults for both local runs and CI.
-# Used by: scripts/security.sh and .github/workflows/security.yaml
 severity:
   - HIGH
   - CRITICAL
 
-# Report everything, but only fail the build on the severities above.
 exit-code: 1
 
 misconfiguration:
   include-non-failures: false
 
 vulnerability:
-  # A vulnerability with no fix available is noise in a gate: there is nothing
-  # to do about it until upstream ships a patch.
   ignore-unfixed: true
 
 scan:
   skip-dirs:
     - .git
     - reports
-    # Rendered output is scanned separately, with its own settings.
     - build

@@ -1,5 +1,78 @@
 # Registro de avances
 
+## [2026-09-03] — Corrección de fallos en el pipeline de integración CI
+
+### Síntomas observados
+
+- La pipeline de integración (`CI / CPU-profile integration`) se quedaba esperando
+  infinitamente en el paso de PostgreSQL hasta agotar el timeout de 60 min del job.
+- `nullnode-root` mostraba estado `Unknown` (o sin sincronizar) en ArgoCD.
+- El trigger `push → main` estaba desactivado temporalmente como workaround.
+
+### Causa raíz identificada
+
+**Bug crítico en `scripts/up.sh` (`phase_verify`):** el bucle de 60 intentos que
+espera a que `nullnode-root` pase a `Synced` terminaba llamando a `err "..."` en
+lugar de `die "..."`. La función `err` solo imprime un mensaje; `die` aborta el
+script. Al no abortar, el script continuaba a la siguiente fase: `wait_for
+"application/postgres to exist" 300 10`, que espera 300 × 10 s = 50 minutos si el
+Application de ArgoCD no existe (situación exacta cuando `nullnode-root` no sincronizó).
+Con el timeout del CI a 60 min, el job explotaba siempre durante esa espera.
+
+El estado `Unknown` de `nullnode-root` era consecuencia del primer sync en cluster
+frío (imágenes que no están en caché, primer `git clone` de ArgoCD repo-server):
+con 60 intentos × 10 s = 10 min de margen, un arranque lento superaba el umbral.
+
+### Problemas encontrados y corregidos
+
+| # | Archivo | Problema | Fix |
+|---|---------|----------|-----|
+| 1 | `k8s/bootstrap/root/templates/project.yaml` | **Causa raíz.** El AppProject `nullnode` no listaba `argocd` en `destinations`. `nullnode-root` despliega los child Application CRDs al namespace `argocd`. ArgoCD valida el destino contra el AppProject antes de sincronizar → rechaza el sync → `nullnode-root` queda en estado `Unknown` con error `destination {... argocd} is not permitted in project nullnode` → los child apps nunca se crean | Añadir `namespace: argocd` a `destinations` usando `{{ .Values.argocd.namespace }}` para que no quede hardcodeado |
+| 2 | `scripts/up.sh:213` | `err` en lugar de `die` al agotar el timeout — el script **no abortaba** y continuaba a la espera de 50 min de PostgreSQL (síntoma visible del fallo) | Reestructurar con flag `synced` + `die` al final si no sincronizó |
+| 3 | `scripts/up.sh:200` | Timeout de sync demasiado corto: 60 × 10 s = 10 min. Margen insuficiente para el primer arranque (ArgoCD startup + primer git clone) | Aumentado a 90 × 10 s = **15 min** |
+| 4 | `scripts/up.sh:220` | `wait_for "application/postgres to exist" 300 10` = **50 min por app** — causaba el "espera infinita" visible | Reducido a 60 × 10 s = **10 min** |
+| 5 | `scripts/security.sh:138` | Versión de LocalStack hardcodeada: `3.8.1`. El despliegue usa `4.4.0`. El pin 3.8.1 cuelga `terraform apply` a los 3 min (provider AWS `~> 5.70` espera estabilidad S3 que 3.x nunca reporta) | Actualizado a `4.4.0` |
+| 6 | `.github/workflows/ci.yaml` | Trigger `push → main` desactivado como workaround | Re-activado |
+
+### Reestructuración del CI: core ligero vs. full manual
+
+El job `integration` levantaba la plataforma **completa** (ollama pide 2 CPU, más el
+stack de observabilidad): ~4 CPU de `requests`, demasiado para un runner estándar
+de GitHub. Se separó en dos:
+
+- **`core-integration`** (corre en `push`/`pull_request`): despliega solo
+  cluster + LocalStack + ArgoCD + PostgreSQL + Redis mediante el nuevo flag
+  `CORE_ONLY=true`. Valida toda la maquinaria GitOps —incluido el fix del sync de
+  `nullnode-root`— con <1 CPU. Cabe en cualquier runner.
+- **`integration`** (full e2e con ollama + gateway + smoke test): pasa a
+  `if: github.event_name == 'workflow_dispatch'`, es decir, **manual** desde el
+  botón "Run workflow". Ideal para lanzarlo en un runner self-hosted con GPU.
+
+El flag `CORE_ONLY` se propaga: env del CI → `scripts/up.sh` →
+`-var core_only` (Terraform) → valor `platform.coreOnly` del chart bootstrap →
+parámetros Helm de ArgoCD sobre `nullnode-root` que desactivan
+`keda`, `observabilityStack`, `otelCollector`, `ollama`, `litellm`, `presidio`,
+`observability` y `global.monitoring` (esto último elimina los ServiceMonitor, que
+si no dependerían de los CRDs del operador de Prometheus). Compatible con GitOps:
+no se toca ningún values del repo, se sobreescribe en el Application.
+
+### Problemas pendientes / deuda técnica identificada
+
+- **Fijación de versiones inconsistente:** `security.sh` hardcodeaba la imagen de
+  LocalStack independientemente del pin en Terraform. Si se actualiza un pin, hay
+  que actualizar el scan a mano. Mejora futura: leer la versión desde el variable
+  de Terraform.
+- **Sin verificación real de fin de primer arranque:** el `wait_for` de ArgoCD
+  comprueba que el objeto `Application` existe, pero no espera a que el repo-server
+  haya completado el primer clone. En clusters muy lentos (redes restrictivas,
+  GitHub throttling) podría seguir fallando. Mejora futura: sondear
+  `status.reconciledAt` o `status.conditions`.
+- **Diagrama de timeouts:** los valores de `wait_for` en `phase_verify` no están
+  documentados. Añadir una tabla en el RUNBOOK con los plazos y por qué se
+  eligieron.
+
+---
+
 ## [2026-08-26] — Auditoría y reconstrucción de la plataforma
 
 Revisión del repositorio frente a lo que declaraban `GOTO.md` y `AVANCES.md`. La

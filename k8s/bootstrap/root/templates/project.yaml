@@ -15,6 +15,8 @@ spec:
     - https://nvidia.github.io/k8s-device-plugin
     - https://nvidia.github.io/dcgm-exporter/helm-charts
   destinations:
+    - namespace: "{{ .Values.argocd.namespace }}"
+      server: https://kubernetes.default.svc
     - namespace: nullnode-platform
       server: https://kubernetes.default.svc
     - namespace: nullnode-observability
@@ -23,8 +25,6 @@ spec:
       server: https://kubernetes.default.svc
     - namespace: kube-system
       server: https://kubernetes.default.svc
-  # The platform installs CRDs (KEDA, Prometheus Operator), so cluster-scoped
-  # resources have to be allowed.
   clusterResourceWhitelist:
     - group: '*'
       kind: '*'

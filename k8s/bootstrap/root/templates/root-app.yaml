@@ -22,6 +22,24 @@ spec:
           value: {{ .Values.gitops.targetRevision | quote }}
         - name: global.hostSuffix
           value: {{ .Values.platform.hostSuffix | quote }}
+        {{- if .Values.platform.coreOnly }}
+        - name: global.monitoring.enabled
+          value: "false"
+        - name: components.keda.enabled
+          value: "false"
+        - name: components.observabilityStack.enabled
+          value: "false"
+        - name: components.otelCollector.enabled
+          value: "false"
+        - name: components.ollama.enabled
+          value: "false"
+        - name: components.litellm.enabled
+          value: "false"
+        - name: components.presidio.enabled
+          value: "false"
+        - name: components.observability.enabled
+          value: "false"
+        {{- end }}
   destination:
     server: https://kubernetes.default.svc
     namespace: {{ .Values.argocd.namespace }}

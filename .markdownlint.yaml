@@ -1,15 +1,9 @@
 default: true
 
-# Prose is wrapped at 80 by hand; tables and code blocks are not.
 MD013: false
-# Duplicate headings are fine across different sections (Contexto, Decisión...).
 MD024:
   siblings_only: true
-# Bare URLs appear inside code blocks and tables.
 MD034: false
-# The ADR template starts with an H1 followed by bold metadata, not a heading.
 MD025:
   front_matter_title: ""
-# The README centres its GIFs and the architecture diagram with <p align> and
-# <img>, which Markdown cannot express. Images still carry alt text (MD045).
 MD033: false
