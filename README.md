@@ -1,5 +1,21 @@
 # NullNode <img src="docs/media/nullnode.png" alt="NullNode Logo" width="70" style="vertical-align: middle; margin-left: 10px;">
 
+<p align="center">
+  <img src="https://img.shields.io/badge/K3s-Kubernetes-FFC61C?style=flat-square&logo=k3s&logoColor=white" alt="K3s">
+  <img src="https://img.shields.io/badge/ArgoCD-GitOps-EF4444?style=flat-square&logo=argo&logoColor=white" alt="ArgoCD">
+  <img src="https://img.shields.io/badge/Terraform-IaC-844FBA?style=flat-square&logo=terraform&logoColor=white" alt="Terraform">
+  <img src="https://img.shields.io/badge/Helm-Package%20Manager-0F1689?style=flat-square&logo=helm&logoColor=white" alt="Helm">
+  <img src="https://img.shields.io/badge/LiteLLM-Gateway-3B82F6?style=flat-square&logo=openai&logoColor=white" alt="LiteLLM">
+  <img src="https://img.shields.io/badge/Ollama-Inference-000000?style=flat-square&logo=ollama&logoColor=white" alt="Ollama">
+  <img src="https://img.shields.io/badge/Redis-Prompt%20Cache-DC2626?style=flat-square&logo=redis&logoColor=white" alt="Redis">
+  <img src="https://img.shields.io/badge/KEDA-Autoscaling-FF9900?style=flat-square&logo=kubernetes&logoColor=white" alt="KEDA">
+  <img src="https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL">
+  <img src="https://img.shields.io/badge/Prometheus-Metrics-E6522C?style=flat-square&logo=prometheus&logoColor=white" alt="Prometheus">
+  <img src="https://img.shields.io/badge/Grafana-Dashboards-F46800?style=flat-square&logo=grafana&logoColor=white" alt="Grafana">
+  <img src="https://img.shields.io/badge/OpenTelemetry-Tracing-000000?style=flat-square&logo=opentelemetry&logoColor=white" alt="OpenTelemetry">
+  <img src="https://img.shields.io/badge/LocalStack-AWS%20Mock-000000?style=flat-square&logo=localstack&logoColor=white" alt="LocalStack">
+</p>
+
 Plataforma LLMOps enterprise local y privada sobre K3s. Implementa inferencia local de LLMs con escalado dinámico (KEDA), gateway con presupuestos y control de costes (LiteLLM), caché de prompts (Redis), observabilidad dedicada GenAI y despliegue automatizado 100% por GitOps con ArgoCD y Terraform.
 
 Coste: 0 € (solo luz). Todo corre en tu hardware y los servicios de AWS están mockeados.
@@ -118,25 +134,6 @@ También `make`, en una WSL2 recién instalada no lo trae🤓:
 | `make security` | `./scripts/security.sh` |
 | `PROFILE=cpu make up` | `PROFILE=cpu ./scripts/up.sh` |
 
-16 GiB de RAM y ~60 GiB de disco en perfil GPU; 8 GiB de RAM en CPU.
-
-## Posibles mejoras
-
-A futuro lo que tiene sentido añadir sin cambiar la arquitectura base:
-
-- GPUs no-NVIDIA. Solo cambiaría la imagen de k3s y el device plugin (ROCm en
-  AMD, GGML en Apple Silicon); el resto de la plataforma no se toca.
-- Un proveedor hosted en el catálogo, para que el FinOps deje de ser un
-  ensayo y los presupuestos por departamento controlen dinero real.
-- External Secrets Operator, para sincronizar Secrets desde Secrets Manager
-  con rotación, sin pasar por `terraform apply`.
-- Open WebUI como componente opcional dentro del app-of-apps, en vez del
-  `docker run` suelto de ahora.
-- Tempo como backend de trazas, ya que el collector recibe OTLP de LiteLLM;
-  con su datasource en Grafana se podría ver dónde se va el tiempo en una
-  petición lenta.
-- Un namespace por departamento con `ResourceQuota`, para que las cuotas
-  dejen de ser solo lógicas en el gateway.
 
 ## Documentación
 
