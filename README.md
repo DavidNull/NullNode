@@ -1,6 +1,6 @@
 # NullNode <img src="docs/media/nullnode.png" alt="NullNode Logo" width="70" style="vertical-align: middle; margin-left: 10px;">
 
-La idea nació de algo muy concreto: un grupo de gente en su casa que quiere tener su propia IA ligera (porque con recursos domésticos no da para más), sin pagar un euro, y con control real de quién gasta qué y a qué hora. Gobernanza, básicamente. 
+La idea nació de algo muy concreto: un grupo de gente en su casa que quiere tener su propia IA ligera(porque con recursos domésticos no da para más), sin pagar un euro, y con control real de quién gasta qué y a qué hora. Gobernanza, básicamente.
 
 <p align="center">
   <img src="https://img.shields.io/badge/K3s-Kubernetes-FFC61C?style=flat-square&logo=k3s&logoColor=white" alt="K3s">
@@ -135,7 +135,6 @@ También `make`, en una WSL2 recién instalada no lo trae🤓:
 | `make validate` | `./scripts/validate.sh` |
 | `make security` | `./scripts/security.sh` |
 | `PROFILE=cpu make up` | `PROFILE=cpu ./scripts/up.sh` |
-
 
 ## Documentación
 
