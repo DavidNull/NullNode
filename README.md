@@ -1,4 +1,5 @@
 # NullNode <img src="docs/media/nullnode.png" alt="NullNode Logo" width="70" style="vertical-align: middle; margin-left: 10px;">
+
 **Todo lo que monta una plataforma de verdad, en tu hardware.**
 
 <p align="center">
