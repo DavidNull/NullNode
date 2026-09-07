@@ -1,6 +1,5 @@
 # NullNode <img src="docs/media/nullnode.png" alt="NullNode Logo" width="70" style="vertical-align: middle; margin-left: 10px;">
-
-La idea nació de algo muy concreto: un grupo de gente en su casa que quiere tener su propia IA ligera(porque con recursos domésticos no da para más), sin pagar un euro, y con control real de quién gasta qué y a qué hora. Gobernanza, básicamente.
+**Todo lo que monta una plataforma de verdad, en tu hardware.**
 
 <p align="center">
   <img src="https://img.shields.io/badge/K3s-Kubernetes-FFC61C?style=flat-square&logo=k3s&logoColor=white" alt="K3s">
@@ -17,6 +16,8 @@ La idea nació de algo muy concreto: un grupo de gente en su casa que quiere ten
   <img src="https://img.shields.io/badge/OpenTelemetry-Tracing-000000?style=flat-square&logo=opentelemetry&logoColor=white" alt="OpenTelemetry">
   <img src="https://img.shields.io/badge/LocalStack-AWS%20Mock-000000?style=flat-square&logo=localstack&logoColor=white" alt="LocalStack">
 </p>
+
+La idea nació de algo muy concreto: un grupo de gente en su casa que quiere tener su propia IA ligera(porque con recursos domésticos no da para más), sin pagar un euro, y con control real de quién gasta qué y a qué hora. Gobernanza, básicamente.
 
 Plataforma LLMOps enterprise local y privada sobre K3s. Implementa inferencia local de LLMs con escalado dinámico (KEDA), gateway con presupuestos y control de costes (LiteLLM), caché de prompts (Redis), observabilidad dedicada GenAI y despliegue automatizado 100% por GitOps con ArgoCD y Terraform.
 
