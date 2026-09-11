@@ -44,10 +44,10 @@ Nada de esto se ha ejecutado. Orden de comprobación:
       despertar y si `num_retries` basta para no perder la primera petición.
 - [ ] **Presupuestos por usuario además de por equipo.** LiteLLM lo soporta;
       ahora mismo solo hay equipos por departamento.
-- [ ] **Open WebUI como componente opcional.** Hoy se documenta como
-      `docker run` (cliente, no infraestructura). Meterlo en el app-of-apps con
-      `enabled: false` daría chat con Ingress y clave de departamento inyectada
-      desde el Secret, sin pasos manuales.
+- [x] **Open WebUI como componente opcional.** Antes se documentaba como
+      `docker run` (cliente, no infraestructura). Ahora está en el app-of-apps con
+      `enabled: false` por defecto. Al habilitarlo se despliega chat con Ingress
+      y clave de departamento inyectada desde el Secret, sin pasos manuales.
 - [ ] **Escaneo de las imágenes grandes en el gate.** LiteLLM y Ollama están
       fuera porque sus CVEs vienen de las capas base de CUDA y Python. Con una
       allowlist por capa base sí serían accionables.

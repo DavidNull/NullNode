@@ -124,7 +124,31 @@ sin necesidad.
 
 ## Open WebUI, si quieres un chat de verdad
 
-No es parte de la plataforma. Un contenedor y listo:
+Open WebUI está disponible como componente opcional del app-of-apps. Para habilitarlo:
+
+```bash
+# En k8s/platform/values.yaml (o values-gpu.yaml / values-cpu.yaml)
+components:
+  openWebui:
+    enabled: true
+    wave: "25"
+    values:
+      defaultDepartment: engineering
+```
+
+Tras aplicar el cambio con GitOps, el chat estará disponible en:
+`http://chat.nullnode.localhost`
+
+### Ventajas de la versión integrada
+
+- **Ingress automático**: No hay que configurar puertos manualmente
+- **Clave inyectada**: Usa la master key de LiteLLM desde el Secret, sin variables de entorno
+- **Sync wave**: Se despliega después del gateway (wave 25 vs 20) garantizando disponibilidad
+- **GitOps**: Todo se gestiona desde git, como el resto de la plataforma
+
+### Versión manual (docker run)
+
+Si prefieres no integrarlo en el clúster, puedes seguir usando el contenedor externo:
 
 ```bash
 docker run -d --name nullnode-chat -p 3001:8080 \
@@ -134,14 +158,9 @@ docker run -d --name nullnode-chat -p 3001:8080 \
   ghcr.io/open-webui/open-webui:main
 ```
 
-Abre `http://localhost:3001`.
-
 El `--add-host gateway.nullnode.localhost:host-gateway` no es opcional: desde
 dentro de otro contenedor ese nombre no resuelve, y sin él Open WebUI arranca
 pero no encuentra ningún modelo.
-
-Meterlo dentro del clúster, con Ingress y la clave inyectada desde el Secret,
-está en [GOTO.md](../context/GOTO.md) como componente opcional.
 
 ---
 

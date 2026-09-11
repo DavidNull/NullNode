@@ -1,0 +1,3 @@
+{{- if .Values.components.openWebui.enabled }}
+{{ include "nullnode.localApp" (dict "root" $ "name" "open-webui" "component" .Values.components.openWebui) }}
+{{- end }}

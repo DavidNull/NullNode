@@ -30,6 +30,7 @@ CHARTS=(
   "${REPO_ROOT}/k8s/charts/ollama"
   "${REPO_ROOT}/k8s/charts/litellm"
   "${REPO_ROOT}/k8s/charts/presidio"
+  "${REPO_ROOT}/k8s/charts/open-webui"
   "${REPO_ROOT}/k8s/charts/nullnode-observability"
   "${REPO_ROOT}/k8s/platform"
   "${REPO_ROOT}/k8s/bootstrap/root"
