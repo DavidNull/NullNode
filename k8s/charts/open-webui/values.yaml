@@ -1,0 +1,58 @@
+global:
+  namespace: nullnode-platform
+  hostSuffix: nullnode.localhost
+  ingressClassName: traefik
+  monitoring:
+    enabled: false
+    releaseLabel: kube-prometheus-stack
+
+image:
+  repository: ghcr.io/open-webui/open-webui
+  tag: "main"
+  pullPolicy: IfNotPresent
+
+replicaCount: 2
+
+service:
+  port: 8080
+
+ingress:
+  enabled: true
+  hostPrefix: chat
+
+# LiteLLM gateway configuration
+litellm:
+  # Gateway service URL within the cluster
+  gatewayUrl: http://litellm.nullnode-platform.svc.cluster.local:4000/v1
+  # Secret containing the LiteLLM master key
+  authSecret: nullnode-litellm-credentials
+  # Key in the secret that contains the master key
+  masterKeyKey: master_key
+
+# Default department to use for API key (if not specified by user)
+# This should match one of the departments defined in the LiteLLM chart
+defaultDepartment: engineering
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 512Mi
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 1000
+  runAsGroup: 1000
+  fsGroup: 1000
+  seccompProfile:
+    type: RuntimeDefault
+
+containerSecurityContext:
+  allowPrivilegeEscalation: false
+  readOnlyRootFilesystem: false
+  capabilities:
+    drop: ["ALL"]
+
+networkPolicy:
+  enabled: false

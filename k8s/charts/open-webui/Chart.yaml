@@ -1,0 +1,8 @@
+apiVersion: v2
+name: open-webui
+description: >-
+  Open WebUI - Chat interface for LLMs. Provides a user-friendly web UI for
+  interacting with models through the LiteLLM gateway.
+type: application
+version: 1.0.0
+appVersion: "main"

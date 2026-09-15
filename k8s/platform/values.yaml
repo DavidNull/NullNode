@@ -132,6 +132,13 @@ components:
     wave: "20"
     values: {}
 
+  # --- wave 25: chat UI ---------------------------------------------------
+  openWebui:
+    enabled: false # Optional chat interface
+    wave: "25"
+    values:
+      defaultDepartment: engineering
+
   # --- wave 30: dashboards, alerts, scaling policy ------------------------
   observability:
     enabled: true
