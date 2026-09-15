@@ -139,12 +139,33 @@ components:
 Tras aplicar el cambio con GitOps, el chat estará disponible en:
 `http://chat.nullnode.localhost`
 
-### Ventajas de la versión integrada
+### Características de la versión integrada
 
 - **Ingress automático**: No hay que configurar puertos manualmente
 - **Clave inyectada**: Usa la master key de LiteLLM desde el Secret, sin variables de entorno
 - **Sync wave**: Se despliega después del gateway (wave 25 vs 20) garantizando disponibilidad
 - **GitOps**: Todo se gestiona desde git, como el resto de la plataforma
+- **Seguridad**: NetworkPolicy configurada, PodDisruptionBudget para HA
+- **Monitoreo**: ServiceMonitor integrado con Prometheus
+- **Dependencias**: Init container espera a que el gateway esté disponible
+
+### Configuración avanzada
+
+```yaml
+components:
+  openWebui:
+    enabled: true
+    values:
+      defaultDepartment: engineering
+      resources:
+        requests:
+          cpu: 200m
+          memory: 512Mi
+        limits:
+          memory: 1Gi
+      networkPolicy:
+        enabled: true  # Por defecto false
+```
 
 ### Versión manual (docker run)
 
