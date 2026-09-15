@@ -18,7 +18,7 @@ spec:
               kubernetes.io/metadata.name: kube-system
         - namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Values.global.namespace }}
+              kubernetes.io/metadata.name: {{ .Values.global.namespace | default "nullnode-platform" }}
       ports:
         - port: {{ .Values.service.port }}
   egress:
@@ -35,7 +35,7 @@ spec:
               nullnode.io/component: gateway
           namespaceSelector:
             matchLabels:
-              kubernetes.io/metadata.name: {{ .Values.global.namespace }}
+              kubernetes.io/metadata.name: {{ .Values.global.namespace | default "nullnode-platform" }}
       ports:
         - port: 4000
 {{- end }}

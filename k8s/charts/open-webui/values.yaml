@@ -2,6 +2,9 @@ global:
   namespace: nullnode-platform
   hostSuffix: nullnode.localhost
   ingressClassName: traefik
+  monitoring:
+    enabled: false
+    releaseLabel: kube-prometheus-stack
 
 image:
   repository: ghcr.io/open-webui/open-webui
