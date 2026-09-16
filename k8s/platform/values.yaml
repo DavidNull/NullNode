@@ -51,6 +51,22 @@ components:
     namespace: kube-system
     valuesFile: nvidia-device-plugin.yaml
 
+  # --- wave -20: secrets operator -----------------------------------------
+  # Installed before everything: its CRDs and the synced Secrets are what the
+  # datastores and the gateway consume. See ADR-0007.
+  externalSecrets:
+    enabled: true
+    wave: "-20"
+    repoURL: https://charts.external-secrets.io
+    chart: external-secrets
+    version: "2.10.0"
+    namespace: external-secrets
+    valuesFile: external-secrets.yaml
+    extraSyncOptions:
+      # The chart ships 25 CRDs; client-side apply trips the annotation size
+      # limit on them.
+      - ServerSideApply=true
+
   # --- wave -10: operators and CRDs ---------------------------------------
   keda:
     enabled: true
@@ -74,6 +90,24 @@ components:
     extraSyncOptions:
       - ServerSideApply=true
       - SkipDryRunOnMissingResource=true
+
+  # --- wave -5: secret stores and the secrets themselves ------------------
+  # The ClusterSecretStore pointed at the mocked Secrets Manager plus one
+  # ExternalSecret per platform credential. Renders the same Secret names and
+  # keys Terraform used to project, so nothing downstream changes.
+  externalSecretsConfig:
+    enabled: true
+    wave: "-5"
+    chart: external-secrets-config
+    namespace: nullnode-platform
+    extraSyncOptions:
+      # CRDs come from the external-secrets app one wave earlier; skip the
+      # dry-run if ArgoCD reaches here before they register.
+      - SkipDryRunOnMissingResource=true
+    values:
+      # nullnode/platform/credentials, the JSON blob cloud-mock writes.
+      platformSecretId: nullnode/platform/credentials
+      refreshInterval: 1h
 
   # --- wave 0: datastores --------------------------------------------------
   postgres:

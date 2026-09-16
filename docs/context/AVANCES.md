@@ -1,5 +1,57 @@
 # Registro de avances
 
+## [2026-09-17] — External Secrets Operator releva al puente de Terraform
+
+### Motivación
+
+Los Secrets de Kubernetes los creaba `platform-bootstrap` leyendo Secrets
+Manager con un `data source`. Un `data source` solo se reevalúa en un
+`terraform apply`, así que rotar una credencial en el origen no llegaba al
+clúster hasta el siguiente apply. ADR-0005 ya anticipaba la sustitución por
+External Secrets Operator; esto la hace.
+
+### Qué se hizo
+
+- **Operador** (`k8s/platform/values/external-secrets.yaml`, componente
+  `externalSecrets`): chart `external-secrets` 2.10.0 como `Application` en la
+  wave -20, antes de datastores y gateway. El proveedor AWS de ESO no tiene
+  campo de endpoint, así que se apunta a LocalStack con
+  `AWS_SECRETSMANAGER_ENDPOINT` / `AWS_STS_ENDPOINT` en el controlador.
+- **Wiring** (`k8s/charts/external-secrets-config`, componente
+  `externalSecretsConfig`, wave -5): un `ClusterSecretStore` contra el Secrets
+  Manager mockeado y un `ExternalSecret` por credencial. Cada uno acuña el mismo
+  Secret y las mismas claves que proyectaba Terraform, así que ningún chart de
+  consumo cambia. El Secret estático `nullnode-aws-credentials` (test/test) se
+  mueve aquí; lo usan los pods y el propio store para autenticarse.
+- **Terraform**: `platform-bootstrap/secrets.tf` pierde los cinco
+  `kubernetes_secret_v1`; queda el `data source` de solo lectura que alimenta
+  `make key` / `make grafana-password`. Se limpia el `depends_on` de la
+  `Application` raíz y el comentario de `namespaces.tf`.
+- **GitOps**: el `AppProject` suma el repo `charts.external-secrets.io` y el
+  namespace `external-secrets` a sus destinos. El helper `nullnode.localApp`
+  gana `extraSyncOptions` (paridad con `upstreamApp`) para que el chart de
+  configuración declare `SkipDryRunOnMissingResource` frente al orden de los
+  CRDs.
+- **CI**: pin de ESO añadido a `versions-check.sh`. ADR-0007 nueva; ADR-0005,
+  GOTO.md y el índice de ADRs actualizados.
+
+### Verificación (offline, sin clúster)
+
+`helm lint`/`template` del chart nuevo y del app-of-apps en ambos perfiles,
+kube-linter y `trivy config` sobre los charts propios (limpios; los hallazgos
+`access-to-secrets` son del chart upstream, que el pipeline no escanea),
+`terraform fmt`/`validate` de `platform-bootstrap`, y render del controlador
+confirmando el endpoint inyectado. No se ha levantado la plataforma.
+
+### Pendiente
+
+- **Reloader**: `secretKeyRef` por env no se recarga en caliente, así que rotar
+  de extremo a extremo aún exige un rollout. Un Reloader que observe el Secret y
+  reinicie el Deployment cierra el círculo.
+- **Claves por departamento**: el Job de bootstrap las publica en Secrets
+  Manager pero nada las lee de vuelta a un Secret. Un `ExternalSecret` más
+  dejaría a Open WebUI usar una clave con alcance en vez de la master.
+
 ## [2026-09-03] — Corrección de fallos en el pipeline de integración CI
 
 ### Síntomas observados

@@ -95,14 +95,11 @@ resource "helm_release" "nullnode_root" {
   chart     = "${path.module}/../../../k8s/bootstrap/root"
   namespace = kubernetes_namespace_v1.argocd.metadata[0].name
 
-  # ArgoCD CRDs must exist before these manifests validate.
+  # ArgoCD CRDs must exist before these manifests validate. The platform
+  # credentials are no longer projected here: External Secrets Operator syncs
+  # them once ArgoCD brings it up (sync wave -20). See secrets.tf.
   depends_on = [
     helm_release.argocd,
-    kubernetes_secret_v1.litellm,
-    kubernetes_secret_v1.postgres,
-    kubernetes_secret_v1.redis,
-    kubernetes_secret_v1.aws,
-    kubernetes_secret_v1.grafana_admin,
   ]
 
   values = [yamlencode({

@@ -14,3 +14,4 @@ ruta; el contenido va en castellano, como el resto de la documentación.
 | [0004](0004-scaling-signal.md) | KEDA sobre métrica de Prometheus para inferencia, HPA de CPU para el gateway | Aceptada |
 | [0005](0005-secrets-flow.md) | Los secretos nacen en Terraform, viven en Secrets Manager y se proyectan a Kubernetes | Aceptada |
 | [0006](0006-metrics-sources.md) | Métricas de LiteLLM con fallback a spanmetrics de OTel | Aceptada |
+| [0007](0007-external-secrets-operator.md) | External Secrets Operator releva al puente de Terraform: rotación sin `apply` | Aceptada |

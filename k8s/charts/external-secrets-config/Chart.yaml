@@ -1,0 +1,11 @@
+apiVersion: v2
+name: external-secrets-config
+description: >-
+  Wiring for External Secrets Operator: a ClusterSecretStore pointed at the
+  mocked Secrets Manager and one ExternalSecret per platform credential. The
+  operator itself is the upstream external-secrets chart, one wave earlier.
+  Renders the same Secret names and keys Terraform used to project. See
+  docs/adr/0007-external-secrets-operator.md.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
