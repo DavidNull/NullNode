@@ -1,0 +1,31 @@
+# Defaults keep the chart renderable standalone. The platform chart overrides
+# `global` (and platformSecretId / refreshInterval) at deploy time.
+global:
+  namespace: nullnode-platform
+  observabilityNamespace: nullnode-observability
+  aws:
+    region: eu-west-1
+    # The Secret the workloads pass to LocalStack. This chart also creates it.
+    credentialsSecret: nullnode-aws-credentials
+
+# The JSON blob cloud-mock writes to Secrets Manager. Each field below is a
+# `property` an ExternalSecret pulls out of it.
+platformSecretId: nullnode/platform/credentials
+
+# How often the controller re-reads Secrets Manager. Rotating a value at the
+# source propagates into the Kubernetes Secret within this window, with no
+# terraform apply. (Pods still need a restart to pick up an env-var secret.)
+refreshInterval: 1h
+
+secretStore:
+  # Cluster-scoped, so one store serves ExternalSecrets in every namespace.
+  name: nullnode-cloud-mock
+
+# The static access keys. LocalStack ignores their value but the SDK refuses to
+# call without them, so they are the literal string "test" - not
+# credential-shaped, and already in git in the Terraform providers. They are
+# both what the workloads send to LocalStack and what the ClusterSecretStore
+# authenticates with.
+awsCredentials:
+  accessKeyId: test
+  secretAccessKey: test

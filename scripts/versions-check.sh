@@ -10,6 +10,7 @@ require_tool helm || die "helm is required"
 
 # name|repo|chart|version - keep in step with k8s/platform/values.yaml
 PINS=(
+  "external-secrets|https://charts.external-secrets.io|external-secrets|2.10.0"
   "keda|https://kedacore.github.io/charts|keda|2.15.2"
   "kube-prometheus-stack|https://prometheus-community.github.io/helm-charts|kube-prometheus-stack|65.5.1"
   "otel-collector|https://open-telemetry.github.io/opentelemetry-helm-charts|opentelemetry-collector|0.108.1"

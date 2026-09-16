@@ -54,9 +54,13 @@ Nada de esto se ha ejecutado. Orden de comprobación:
 
 ## Después: lo que hace falta para que se parezca a producción
 
-- [ ] **External Secrets Operator** en lugar del data source. El flujo ya tiene
-      la forma correcta (ADR-0005): el operador leería el mismo secreto y
-      mantendría los Secrets sincronizados, con rotación sin `terraform apply`.
+- [x] **External Secrets Operator** en lugar del data source. Instalado en la
+      wave -20 con un `ClusterSecretStore` contra el mismo Secrets Manager y un
+      `ExternalSecret` por credencial; Terraform ya no proyecta Secrets. Rotar es
+      cambiar el valor en el origen y esperar al `refreshInterval`, sin
+      `terraform apply` ([ADR-0007](../adr/0007-external-secrets-operator.md)).
+      Falta el eslabón final: un Reloader que reinicie los pods al cambiar el
+      Secret, porque `secretKeyRef` por env no se recarga en caliente.
 - [ ] **Un modelo hosted en el catálogo.** Con todo local el gasto es cero y el
       dashboard de FinOps es un ensayo. Un proveedor de pago detrás de una
       variable convierte los presupuestos en un control real.

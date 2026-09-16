@@ -16,6 +16,7 @@
   <img src="https://img.shields.io/badge/Grafana-Dashboards-F46800?style=flat-square&logo=grafana&logoColor=white" alt="Grafana">
   <img src="https://img.shields.io/badge/OpenTelemetry-Tracing-000000?style=flat-square&logo=opentelemetry&logoColor=white" alt="OpenTelemetry">
   <img src="https://img.shields.io/badge/LocalStack-AWS%20Mock-000000?style=flat-square&logo=localstack&logoColor=white" alt="LocalStack">
+  <img src="https://img.shields.io/badge/External%20Secrets-Rotación-5B4FC0?style=flat-square&logo=kubernetes&logoColor=white" alt="External Secrets Operator">
 </p>
 
 La idea nació de algo muy concreto: un grupo de gente en su casa que quiere tener su propia IA ligera(porque con recursos domésticos no da para más), sin pagar un euro, y con control real de quién gasta qué y a qué hora. Gobernanza, básicamente.
@@ -111,7 +112,8 @@ petición completa en S3.
 | Escalado | KEDA | Escala según peticiones por segundo, no según CPU. |
 | Observabilidad | Prometheus, Grafana, OTel, DCGM | TTFT, tokens/s, hit rate, gasto por equipo, VRAM. |
 | Guardrails | Presidio | Detección y enmascarado de PII. Opcional. |
-| Cloud mock | LocalStack | S3 y Secrets Manager. De aquí salen los secretos. |
+| Cloud mock | LocalStack | S3 (auditoría de peticiones) y Secrets Manager (fuente de las credenciales). |
+| Secretos | External Secrets Operator | Sincroniza las credenciales de Secrets Manager a Secrets de Kubernetes. Rotar es cambiar el origen, sin `terraform apply` ([ADR-0007](docs/adr/0007-external-secrets-operator.md)). |
 | GitOps | ArgoCD | App-of-apps con sync waves, un solo Application raíz. |
 | IaC | Terraform, k3d | Dos stacks: cloud mockeado y bootstrap de la plataforma. |
 

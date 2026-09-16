@@ -9,7 +9,8 @@ locals {
 }
 
 # ArgoCD could create these, but then the labels NetworkPolicies select on
-# would not exist and the Secrets below would have nowhere to land.
+# would not exist, and the ExternalSecrets that land here (nullnode-platform,
+# nullnode-observability) would have nowhere to go before the first sync.
 resource "kubernetes_namespace_v1" "platform" {
   metadata {
     name   = local.platform_namespace

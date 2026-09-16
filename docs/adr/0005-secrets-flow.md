@@ -2,6 +2,11 @@
 
 **Estado:** aceptada · **Fecha:** 2026-08-26
 
+> **Actualización (2026-09-17):** la proyección a Kubernetes ya no la hace el
+> `data source` de Terraform sino External Secrets Operator, sobre el mismo
+> secreto de Secrets Manager. El origen y la forma del flujo no cambian.
+> Ver [ADR-0007](0007-external-secrets-operator.md).
+
 ## Contexto
 
 La plantilla tenía esto en `k8s/platform/litellm/values.yaml`, commiteado:
