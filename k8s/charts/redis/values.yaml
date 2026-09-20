@@ -58,9 +58,9 @@ metrics:
       memory: 64Mi
 
 networkPolicy:
-  # Off by default: a silently blocked cache is hard to diagnose. Turn on
-  # once the platform is known good.
-  enabled: false
+  # Enabled for security. A silently blocked cache is hard to diagnose,
+  # but with proper monitoring this is acceptable trade-off for security.
+  enabled: true
 
 podSecurityContext:
   runAsNonRoot: true

@@ -98,6 +98,8 @@ pinneada, y afectan a dashboards y al trigger de KEDA
   <img src="docs/media/Arquitectura_NullNode.png" alt="Diagrama de arquitectura de NullNode" width="90%">
 </p>
 
+<small>📝 : El diagrama muestra la arquitectura base v0.1.0. Las versiones recientes incluyen componentes adicionales como Open WebUI (interfaz de chat opcional) y External Secrets Operator (rotación automática de secretos). Consulta la tabla de componentes para la arquitectura completa actual.</small>
+
 Una petición: entra por Traefik → LiteLLM valida la clave del departamento y su
 presupuesto → consulta la caché en Redis → si es miss, enruta a Ollama →
 registra gasto en Postgres, traza en el collector, métrica en Prometheus y la
@@ -144,7 +146,13 @@ También `make`, en una WSL2 recién instalada no lo trae🤓:
 
 [docs/](docs/) — arquitectura, decisiones, runbook, guía de conexión para devs.
 
----
+## Licencia
+
+NullNode es open source. Nació como mi laboratorio personal para aprender y trastear con LLMOps, y lo publico porque puede serle útil a alguien más.
+
+**La idea es que se quede así, abierto.**  Sientete libre de forkearlo, mandar una mejora, arreglar algo o simplemente proponer una idea :)
+
+Y si te sirve, con una ⭐ de sobra.
 
 <p align="center">
   <img src="docs/media/NullNode-mii.gif" alt="Mii de NullNode" width="10%">
