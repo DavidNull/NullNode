@@ -14,6 +14,9 @@ spec:
     metadata:
       labels:
         {{- include "postgres.labels" . | nindent 8 }}
+      annotations:
+        # Reloader: restart on secret changes for automatic credential rotation
+        secret.reloader.stakater.com/reload: "{{ .Values.auth.existingSecret }}"
     spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}

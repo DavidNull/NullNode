@@ -47,7 +47,8 @@ metrics:
       memory: 128Mi
 
 networkPolicy:
-  enabled: false
+  # Enabled for security as part of v0.4.0 progressive hardening
+  enabled: true
 
 podSecurityContext:
   runAsNonRoot: true

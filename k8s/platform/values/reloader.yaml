@@ -1,0 +1,29 @@
+# Reloader operator for automatic pod restart on secret/configmap changes
+#
+# This completes the External Secrets Operator flow: when ESO updates a secret,
+# Reloader restarts the pods that use it, so credentials are reloaded without
+# manual intervention. See ADR-0007.
+
+replicaCount: 1
+
+# Watch namespaces (empty = all namespaces)
+watchNamespaces: []
+
+# Reload only resources with specific annotation
+reloader:
+  reloadOnCreate: false
+  ignoreSecrets: false
+  ignoreConfigMaps: false
+
+resources:
+  requests:
+    cpu: 25m
+    memory: 64Mi
+  limits:
+    memory: 128Mi
+
+# Enable Prometheus monitoring
+serviceMonitor:
+  enabled: true
+  additionalLabels:
+    release: kube-prometheus-stack

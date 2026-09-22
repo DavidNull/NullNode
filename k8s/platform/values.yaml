@@ -67,6 +67,16 @@ components:
       # limit on them.
       - ServerSideApply=true
 
+  # --- wave -15: reload operator -------------------------------------------
+  reloader:
+    enabled: true
+    wave: "-15"
+    repoURL: https://stakater.github.io/stakater-charts
+    chart: reloader
+    version: "1.0.67"
+    namespace: reloader
+    valuesFile: reloader.yaml
+
   # --- wave -10: operators and CRDs ---------------------------------------
   keda:
     enabled: true

@@ -35,11 +35,12 @@ Nada de esto se ha ejecutado. Orden de comprobación:
 - [ ] **Backend de trazas.** El collector recibe OTLP y deriva spanmetrics, pero
       las trazas mueren en el exporter `debug`. Añadir Tempo y su datasource en
       Grafana para poder abrir una petición lenta y ver dónde se fue el tiempo.
-- [ ] **Guardrail de PII por defecto.** Presidio está cableado y apagado por
-      RAM. Medir coste en latencia y memoria; si es asumible, encenderlo en el
-      perfil GPU.
-- [ ] **NetworkPolicies.** Escritas y desactivadas. Encenderlas de una en una,
-      verificando entre cada paso.
+- [x] **Guardrail de PII por defecto.** Presidio está cableado y apagado por
+      RAM. Habilitado en perfil GPU como parte de v0.4.0. Se debe medir el impacto
+      en latencia y memoria tras el despliegue para confirmar que es asumible.
+- [x] **NetworkPolicies.** Escritas y desactivadas. Encendidas progresivamente
+      en Redis, Postgres, LiteLLM y Ollama como parte de v0.4.0. Verificadas con
+      helm lint y template validation.
 - [ ] **Escalado a cero.** Implementado y apagado. Medir cuánto tarda el pool en
       despertar y si `num_retries` basta para no perder la primera petición.
 - [ ] **Presupuestos por usuario además de por equipo.** LiteLLM lo soporta;

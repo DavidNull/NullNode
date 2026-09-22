@@ -57,3 +57,9 @@ components:
           memory: 512Mi
         limits:
           memory: 1Gi
+
+  presidio:
+    # Enabled for GPU profile to provide PII detection and masking
+    # Note: Adds ~2 GiB RAM overhead and latency impact. Monitor performance
+    # after enabling. See GOTO.md for measurement guidance.
+    enabled: true
