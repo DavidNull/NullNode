@@ -93,6 +93,10 @@ containerSecurityContext:
   capabilities:
     drop: ["ALL"]
 
+networkPolicy:
+  # Enabled for security as part of v0.4.0 progressive hardening
+  enabled: true
+
 nodeSelector: {}
 tolerations: []
 affinity: {}

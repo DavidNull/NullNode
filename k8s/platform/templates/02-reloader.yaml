@@ -1,0 +1,3 @@
+{{- if .Values.components.reloader.enabled }}
+{{ include "nullnode.upstreamApp" (dict "root" $ "name" "reloader" "component" .Values.components.reloader) }}
+{{- end }}
