@@ -101,6 +101,18 @@ components:
       - ServerSideApply=true
       - SkipDryRunOnMissingResource=true
 
+  tempo:
+    enabled: true
+    wave: "-10"
+    repoURL: https://grafana.github.io/helm-charts
+    chart: tempo
+    version: "1.11.0"
+    namespace: nullnode-observability
+    valuesFile: tempo.yaml
+    extraSyncOptions:
+      - ServerSideApply=true
+      - SkipDryRunOnMissingResource=true
+
   # --- wave -5: secret stores and the secrets themselves ------------------
   # The ClusterSecretStore pointed at the mocked Secrets Manager plus one
   # ExternalSecret per platform credential. Renders the same Secret names and
