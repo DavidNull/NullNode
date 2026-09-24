@@ -1,0 +1,3 @@
+{{- if .Values.components.tempo.enabled }}
+{{ include "nullnode.upstreamApp" (dict "root" $ "name" "tempo" "component" .Values.components.tempo) }}
+{{- end }}

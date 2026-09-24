@@ -82,15 +82,17 @@ config:
       enable_open_metrics: true
       resource_to_telemetry_conversion:
         enabled: true
-    debug:
-      verbosity: basic
+    otlp:
+      endpoint: tempo-distributor.nullnode-observability.svc.cluster.local:4317
+      tls:
+        insecure: true
 
   service:
     pipelines:
       traces:
         receivers: [otlp]
         processors: [memory_limiter, batch]
-        exporters: [spanmetrics, debug]
+        exporters: [spanmetrics, otlp]
       metrics:
         receivers: [otlp, spanmetrics]
         processors: [memory_limiter, batch]

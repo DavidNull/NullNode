@@ -1,0 +1,63 @@
+# Tempo distributed tracing backend
+#
+# Adds Tempo as the tracing backend to complete the observability stack.
+# Previously, traces went to the debug exporter in OTel collector.
+
+replicaCount: 1
+
+# Use local storage for traces (minimal setup)
+tempo:
+  retention: 24h
+  storage:
+    trace:
+      backend: local  # Use local filesystem for simplicity
+      local:
+        path: /var/tempo/traces
+
+# Tempo distributor configuration
+distributor:
+  receivers:
+    otlp:
+      protocols:
+        grpc:
+          endpoint: 0.0.0.0:4317
+        http:
+          endpoint: 0.0.0.0:4318
+
+# Tempo ingester configuration
+ingester:
+  max_block_duration: 2h
+
+# Tempo querier configuration
+querier:
+  frontend:
+    traces:
+      max_query_duration: 0s  # No timeout for queries
+
+# Metrics storage
+metricsGenerator:
+  processor:
+    service-graphs:
+      enabled: true
+    span-metrics:
+      enabled: true
+
+# Storage configuration
+storage:
+  trace:
+    backend: local
+    local:
+      path: /var/tempo/traces
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    memory: 1Gi
+
+# Enable Prometheus monitoring
+serviceMonitor:
+  enabled: true
+  additionalLabels:
+    release: kube-prometheus-stack

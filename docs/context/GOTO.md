@@ -32,9 +32,10 @@ Nada de esto se ha ejecutado. Orden de comprobación:
       provider AWS 5.100. Subido a 4.4.0 (ver VERSIONS.md), el `apply` pasa en
       local. Falta verlo verde en CI tras el push — recordar que ArgoCD reconcilia
       desde el SHA pusheado, no desde el working tree.
-- [ ] **Backend de trazas.** El collector recibe OTLP y deriva spanmetrics, pero
-      las trazas mueren en el exporter `debug`. Añadir Tempo y su datasource en
-      Grafana para poder abrir una petición lenta y ver dónde se fue el tiempo.
+- [x] **Backend de trazas.** El collector recibe OTLP y deriva spanmetrics, pero
+      las trazas mueren en el exporter `debug`. Añadido Tempo y su datasource en
+      Grafana para poder abrir una petición lenta y ver dónde se fue el tiempo como
+      parte de v0.5.0.
 - [x] **Guardrail de PII por defecto.** Presidio está cableado y apagado por
       RAM. Habilitado en perfil GPU como parte de v0.4.0. Se debe medir el impacto
       en latencia y memoria tras el despliegue para confirmar que es asumible.

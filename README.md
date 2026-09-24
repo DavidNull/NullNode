@@ -146,6 +146,13 @@ También `make`, en una WSL2 recién instalada no lo trae🤓:
 
 [docs/](docs/) — arquitectura, decisiones, runbook, guía de conexión para devs.
 
+## Versiones Recientes
+
+**v0.5.1** - Tempo UI + seguridad mejorada
+**v0.5.0** - Observabilidad completa con Tempo
+**v0.4.0** - NetworkPolicies + Reloader + Presidio
+**v0.3.1** - Open WebUI + licencia
+
 ## Licencia
 
 NullNode es open source. Nació como mi laboratorio personal para aprender y trastear con LLMOps, y lo publico porque puede serle útil a alguien más.

@@ -120,6 +120,15 @@ grafana:
       enabled: true
       searchNamespace: ALL
 
+  # Add Tempo as a tracing datasource
+  additionalDataSources:
+    - name: Tempo
+      type: tempo
+      access: proxy
+      url: http://tempo-query.nullnode-observability.svc.cluster.local:3100
+      isDefault: false
+      editable: true
+
   resources:
     requests:
       cpu: 50m
