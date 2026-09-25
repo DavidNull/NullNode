@@ -6,35 +6,42 @@ labels: bug
 assignees: ''
 ---
 
-## Descripción del Problema
-Una descripción clara y concisa de cuál es el problema.
+## Problem Description
 
-## Comportamiento Esperado
-Lo que esperabas que sucediera.
+A clear and concise description of what the problem is.
 
-## Comportamiento Actual
-Lo que realmente sucedió.
+## Expected Behavior
 
-## Pasos para Reproducir
-1. Ejecuta `...`
-2. Clic en '....'
-3. Desplázate a '....'
-4. Ver error
+What you expected to happen.
 
-## Entorno
-- Sistema operativo: [ej. Ubuntu 22.04, Windows 11 con WSL2]
-- Versiones relevantes:
-  - Docker: [ej. 24.0.0]
-  - k3d: [ej. 5.6.0]
-  - Helm: [ej. 3.14.0]
-  - Terraform: [ej. 1.6.0]
-- Perfil usado: [GPU/CPU]
-- Branch/commit: [ej. main, v0.5.0]
+## Actual Behavior
 
-## Logs Relevantes
+What actually happened.
+
+## Steps to Reproduce
+
+1. Run `...`
+2. Click on '....'
+3. Scroll to '....'
+4. See error
+
+## Environment
+
+- Operating system: [e.g. Ubuntu 22.04, Windows 11 with WSL2]
+- Relevant versions:
+  - Docker: [e.g. 24.0.0]
+  - k3d: [e.g. 5.6.0]
+  - Helm: [e.g. 3.14.0]
+  - Terraform: [e.g. 1.6.0]
+- Profile used: [GPU/CPU]
+- Branch/commit: [e.g. main, v0.5.0]
+
+## Relevant Logs
+
+```bash
+Paste output from make status, make smoke, or specific logs here
 ```
-Pega aquí la salida de make status, make smoke, o logs específicos
-```
 
-## Contexto Adicional
-Cualquier otra información relevante, capturas de pantalla, etc.
+## Additional Context
+
+Any other relevant information, screenshots, etc.

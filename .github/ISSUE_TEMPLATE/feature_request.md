@@ -7,18 +7,23 @@ assignees: ''
 ---
 
 ## Is your feature request related to a problem?
-Una descripción clara y concisa de cuál es el problema. Ejemplo: "Estoy frustrado cuando..."
 
-## Describe la solución que te gustaría
-Una descripción clara y concisa de lo que quieres que suceda.
+A clear and concise description of what the problem is. Ex: "I'm frustrated when..."
 
-## Describe alternatives que has considerado
-Una descripción clara y concisa de cualquier solución alternativa o características que has considerado.
+## Describe the solution you'd like
 
-## Contexto Adicional
-Cualquier otro contexto, capturas de pantalla, o ejemplos sobre la feature request.
+A clear and concise description of what you want to happen.
 
-## Arquitectura/Impacto
-- ¿Cómo afectaría esto a la arquitectura existente?
-- ¿Qué componentes necesitarían cambios?
-- ¿Hay alguna ADR relevante que deba actualizarse?
+## Describe alternatives you've considered
+
+A clear and concise description of any alternative solutions or features you've considered.
+
+## Additional Context
+
+Any other context, screenshots, or examples about the feature request.
+
+## Architecture/Impact
+
+- How would this affect the existing architecture?
+- What components would need changes?
+- Are there any relevant ADRs that should be updated?
