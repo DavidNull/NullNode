@@ -1,36 +1,32 @@
-# Documentación
+# Documentation
 
-## `context/` — contexto del proyecto
+## `context/` — project context
 
-Estos cuatro ficheros son el estado del proyecto por escrito. Se commitean a
-propósito: son lo que hay que leer (persona o agente) para retomar el trabajo sin
-reconstruir el razonamiento desde el código.
+These four files are the project state in writing. They're committed for a purpose: they're what you (person or agent) need to read to pick up the work without reconstructing the reasoning from code.
 
-| Fichero | Para qué |
+| File | What it's for |
 | --- | --- |
-| [CONTEXT.md](context/CONTEXT.md) | Qué es la plataforma y por qué está montada así |
-| [GOTO.md](context/GOTO.md) | Qué falta, en orden |
-| [AVANCES.md](context/AVANCES.md) | Qué se hizo y cuándo |
-| [AUDITORIA-PLANTILLA.md](context/AUDITORIA-PLANTILLA.md) | Qué estaba roto en la versión inicial |
+| [CONTEXT.md](context/CONTEXT.md) | What the platform is and why it's built this way |
+| [GOTO.md](context/GOTO.md) | What's missing, in order |
+| [AVANCES.md](context/AVANCES.md) | What was done and when |
+| [AUDITORIA-PLANTILLA.md](context/AUDITORIA-PLANTILLA.md) | What was broken in the initial version |
 
-Al cerrar un bloque de trabajo se actualizan `AVANCES.md` y `GOTO.md`. Si la
-decisión cambia la arquitectura, además va una ADR.
+When closing a block of work, update `AVANCES.md` and `GOTO.md`. If the decision changes the architecture, also add an ADR.
 
-## `uso/` — para el dev que consume la plataforma
+## `uso/` — for the dev consuming the platform
 
-| Fichero | Para qué |
+| File | What it's for |
 | --- | --- |
-| [CONECTAR.md](uso/CONECTAR.md) | Conectar VS Code (Continue, Cline), Open WebUI, SDKs, y qué nombre resuelve desde dónde |
+| [CONECTAR.md](uso/CONECTAR.md) | Connect VS Code (Continue, Cline), Open WebUI, SDKs, and what name resolves from where |
 
-## `ops/` — para quien la opera
+## `ops/` — for whoever operates it
 
-| Fichero | Para qué |
+| File | What it's for |
 | --- | --- |
-| [RUNBOOK.md](ops/RUNBOOK.md) | Diagnóstico por síntoma y por alerta |
-| [TROUBLESHOOTING.md](ops/TROUBLESHOOTING.md) | Fallos frecuentes y cómo resolverlos |
-| [VERSIONS.md](ops/VERSIONS.md) | Versiones pinneadas y cómo actualizarlas |
+| [RUNBOOK.md](ops/RUNBOOK.md) | Diagnosis by symptom and by alert |
+| [TROUBLESHOOTING.md](ops/TROUBLESHOOTING.md) | Common failures and how to resolve them |
+| [VERSIONS.md](ops/VERSIONS.md) | Pinned versions and how to update them |
 
-## `adr/` — decisiones de arquitectura
+## `adr/` — architecture decisions
 
-Una [ADR](adr/) por decisión que no se entiende leyendo el código. Los
-comentarios del repositorio las referencian por ruta.
+One [ADR](adr/) per decision that isn't understood by reading the code. Repository comments reference them by path.

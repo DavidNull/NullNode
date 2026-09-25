@@ -1,6 +1,6 @@
 # NullNode <img src="docs/media/nullnode.png" alt="NullNode Logo" width="70" style="vertical-align: middle; margin-left: 10px;">
 
-**Todo lo que monta una plataforma de verdad, en tu hardware.**
+**Everything a real platform has, but on your own hardware.**
 
 <p align="center">
   <img src="https://img.shields.io/badge/K3s-Kubernetes-FFC61C?style=flat-square&logo=k3s&logoColor=white" alt="K3s">
@@ -16,123 +16,121 @@
   <img src="https://img.shields.io/badge/Grafana-Dashboards-F46800?style=flat-square&logo=grafana&logoColor=white" alt="Grafana">
   <img src="https://img.shields.io/badge/OpenTelemetry-Tracing-000000?style=flat-square&logo=opentelemetry&logoColor=white" alt="OpenTelemetry">
   <img src="https://img.shields.io/badge/LocalStack-AWS%20Mock-000000?style=flat-square&logo=localstack&logoColor=white" alt="LocalStack">
-  <img src="https://img.shields.io/badge/External%20Secrets-Rotación-5B4FC0?style=flat-square&logo=kubernetes&logoColor=white" alt="External Secrets Operator">
+  <img src="https://img.shields.io/badge/External%20Secrets-Rotation-5B4FC0?style=flat-square&logo=kubernetes&logoColor=white" alt="External Secrets Operator">
 </p>
 
-La idea nació de algo muy concreto: un grupo de gente en su casa que quiere tener su propia IA ligera(porque con recursos domésticos no da para más), sin pagar un euro, y con control real de quién gasta qué y a qué hora. Gobernanza, básicamente.
+The idea came from something pretty specific: a group of people at home who want their own lightweight AI (because with home resources you can't do much more), without paying a cent, and with real control over who spends what and when. Governance, basically.
 
-Plataforma LLMOps enterprise local y privada sobre K3s. Implementa inferencia local de LLMs con escalado dinámico (KEDA), gateway con presupuestos y control de costes (LiteLLM), caché de prompts (Redis), observabilidad dedicada GenAI y despliegue automatizado 100% por GitOps con ArgoCD y Terraform.
+Local and private enterprise LLMOps platform on K3s. Implements local LLM inference with dynamic scaling (KEDA), gateway with budgets and cost control (LiteLLM), prompt cache (Redis), dedicated GenAI observability, and 100% automated GitOps deployment with ArgoCD and Terraform.
 
-Coste: 0 € (solo luz). Todo corre en tu hardware y los servicios de AWS están mockeados.
+Cost: 0€ (just electricity). Everything runs on your hardware and AWS services are mocked.
 
 ```bash
-make up          # perfil GPU (por defecto)
+make up          # GPU profile (default)
 PROFILE=cpu make up
 make status
 make smoke
 ```
 
-<!-- despliegue en consola, `make up` de principio a fin -->
+<!-- console deployment, `make up` from start to finish -->
 <p align="center">
-  <img src="docs/media/deploy.gif" alt="Despliegue de NullNode en consola, make up de principio a fin" width="80%">
+  <img src="docs/media/deploy.gif" alt="NullNode deployment in console, make up from start to finish" width="80%">
 </p>
 
-Todo mockeado: AWS, S3, Bedrock, etc.
+Everything mocked: AWS, S3, Bedrock, etc.
 <p align="center">
-  <img src="docs/media/mockeado.png" alt="Servicios AWS mockeados en NullNode" width="80%">
+  <img src="docs/media/mockeado.png" alt="AWS services mocked in NullNode" width="80%">
 </p>
 
 ---
 
-## Antes de arrancar
+## Before you start
 
-### 1. Por defecto asume GPU NVIDIA
+### 1. Defaults to NVIDIA GPU
 
-Necesitas: driver NVIDIA en el host (en Windows si usas WSL2, no en la distro),
-`nvidia-container-toolkit` dentro de la distro con Docker reiniciado, la imagen
-`make k3s-cuda-image` (una vez, los nodos de k3d son contenedores y la oficial
-no trae el runtime), y el device plugin, que se instala solo con el perfil GPU.
-El preflight de `make up` te dice cuál falta.
+You need: NVIDIA driver on the host (on Windows if you use WSL2, not in the distro),
+`nvidia-container-toolkit` inside the distro with Docker restarted, the
+`make k3s-cuda-image` image (once, k3d nodes are containers and the official one
+doesn't bring the runtime), and the device plugin, which installs automatically
+with the GPU profile. The `make up` preflight tells you what's missing.
 
-**Sin GPU:** `PROFILE=cpu make up`. Todo igual, solo más lento por respuesta.
+**No GPU:** `PROFILE=cpu make up`. Same thing, just slower responses.
 
-### 2. Con una sola GPU no escales réplicas
+### 2. With a single GPU don't scale replicas
 
-El device plugin asigna la tarjeta en exclusiva, así que la segunda réplica se
-queda `Pending`. La concurrencia se consigue con `OLLAMA_NUM_PARALLEL`. En
-perfil CPU sí escala. Ver [ADR-0004](docs/adr/0004-scaling-signal.md).
+The device plugin assigns the card exclusively, so the second replica stays
+`Pending`. Concurrency is achieved with `OLLAMA_NUM_PARALLEL`. CPU profile
+does scale. See [ADR-0004](docs/adr/0004-scaling-signal.md).
 
-### 3. Se reconcilia desde git, no desde tu copia local
+### 3. Reconciles from git, not from your local copy
 
-Editar un fichero no hace nada hasta que lo pusheas a la revisión que ArgoCD
-sigue. Para iterar sobre una rama:
+Editing a file does nothing until you push it to the revision ArgoCD follows.
+To iterate on a branch:
 
 ```bash
 terraform -chdir=infra/terraform/platform-bootstrap apply \
-  -var gitops_target_revision=mi-rama
+  -var gitops_target_revision=my-branch
 ```
 
-### 4. El primer arranque tarda 10-20 minutos
+### 4. First boot takes 10-20 minutes
 
-Se descargan la pila de observabilidad y los pesos de los modelos. `^C` es
-seguro: ArgoCD sigue reconciliando por dentro.
+The observability stack and model weights get downloaded. `^C` is safe:
+ArgoCD keeps reconciling in the background.
 
-### 5. No hay UI de chat
+### 5. No chat UI
 
-`make up` expone un endpoint compatible con OpenAI. Conéctate desde VS Code
-con Continue o Cline: [docs/uso/CONECTAR.md](docs/uso/CONECTAR.md).
+`make up` exposes an OpenAI-compatible endpoint. Connect from VS Code with
+Continue or Cline: [docs/uso/CONECTAR.md](docs/uso/CONECTAR.md).
 
-### 6. Versiones pinneadas sin verificar en red
+### 6. Pinned versions without network verification
 
-Los charts de terceros están fijados a ciegas: pasa `make versions-check`
-antes del primer despliegue. Las métricas de LiteLLM dependen de la versión
-pinneada, y afectan a dashboards y al trigger de KEDA
-([ADR-0006](docs/adr/0006-metrics-sources.md)).
+Third-party charts are pinned blindly: run `make versions-check` before the
+first deployment. LiteLLM metrics depend on the pinned version and affect
+dashboards and the KEDA trigger ([ADR-0006](docs/adr/0006-metrics-sources.md)).
 
 ---
 
-## Arquitectura
+## Architecture
 
-<!-- diagrama de arquitectura (queda diseñarla) -->
+<!-- architecture diagram (needs to be designed) -->
 <p align="center">
-  <img src="docs/media/Arquitectura_NullNode.png" alt="Diagrama de arquitectura de NullNode" width="90%">
+  <img src="docs/media/Arquitectura_NullNode.png" alt="NullNode architecture diagram" width="90%">
 </p>
 
-<small>📝 : El diagrama muestra la arquitectura base v0.1.0. Las versiones recientes incluyen componentes adicionales como Open WebUI (interfaz de chat opcional) y External Secrets Operator (rotación automática de secretos). Consulta la tabla de componentes para la arquitectura completa actual.</small>
+<small>📝 Note: The diagram shows the base architecture v0.1.0. Recent versions include additional components like Open WebUI (optional chat interface) and External Secrets Operator (automatic secret rotation). Check the components table for the complete current architecture.</small>
 
-Una petición: entra por Traefik → LiteLLM valida la clave del departamento y su
-presupuesto → consulta la caché en Redis → si es miss, enruta a Ollama →
-registra gasto en Postgres, traza en el collector, métrica en Prometheus y la
-petición completa en S3.
+A request: goes through Traefik → LiteLLM validates the department key and budget
+→ checks cache in Redis → if miss, routes to Ollama → logs spend in Postgres,
+trace in collector, metric in Prometheus and the full request in S3.
 
-| Capa | Componente | Qué hace |
+| Layer | Component | What it does |
 | --- | --- | --- |
-| Gateway | LiteLLM | Endpoint compatible con OpenAI. Claves virtuales por departamento con presupuesto, TPM y RPM. Caché, guardrail de PII, auditoría. |
-| Caché | Redis | Caché de prompts y estado compartido del router. |
-| Gobierno | PostgreSQL | Equipos, claves y presupuestos. Sobreviven a un reinicio y se cambian por API. |
-| Inferencia | Ollama | StatefulSet con caché de modelos por réplica y precarga de pesos. |
-| Escalado | KEDA | Escala según peticiones por segundo, no según CPU. |
-| Observabilidad | Prometheus, Grafana, OTel, DCGM | TTFT, tokens/s, hit rate, gasto por equipo, VRAM. |
-| Guardrails | Presidio | Detección y enmascarado de PII. Opcional. |
-| Cloud mock | LocalStack | S3 (auditoría de peticiones) y Secrets Manager (fuente de las credenciales). |
-| Secretos | External Secrets Operator | Sincroniza las credenciales de Secrets Manager a Secrets de Kubernetes. Rotar es cambiar el origen, sin `terraform apply` ([ADR-0007](docs/adr/0007-external-secrets-operator.md)). |
-| GitOps | ArgoCD | App-of-apps con sync waves, un solo Application raíz. |
-| IaC | Terraform, k3d | Dos stacks: cloud mockeado y bootstrap de la plataforma. |
+| Gateway | LiteLLM | OpenAI-compatible endpoint. Virtual keys per department with budget, TPM and RPM. Cache, PII guardrail, audit. |
+| Cache | Redis | Prompt cache and shared router state. |
+| Governance | PostgreSQL | Teams, keys and budgets. Survives restarts and changes via API. |
+| Inference | Ollama | StatefulSet with model cache per replica and weight preloading. |
+| Scaling | KEDA | Scales by requests per second, not by CPU. |
+| Observability | Prometheus, Grafana, OTel, DCGM | TTFT, tokens/s, hit rate, spend per team, VRAM. |
+| Guardrails | Presidio | PII detection and masking. Optional. |
+| Cloud mock | LocalStack | S3 (request audit) and Secrets Manager (credentials source). |
+| Secrets | External Secrets Operator | Syncs credentials from Secrets Manager to Kubernetes Secrets. Rotating is changing the source, no `terraform apply` ([ADR-0007](docs/adr/0007-external-secrets-operator.md)). |
+| GitOps | ArgoCD | App-of-apps with sync waves, single root Application. |
+| IaC | Terraform, k3d | Two stacks: mocked cloud and platform bootstrap. |
 
 <br>
 <p align="center">
-  <img src="docs/media/grafana.png" alt="Dashboards de Grafana: GenAI, gasto y VRAM" width="80%">
+  <img src="docs/media/grafana.png" alt="Grafana dashboards: GenAI, spend and VRAM" width="80%">
 </p>
 
-## Requisitos
+## Requirements
 
-Docker, `k3d` ≥ 5.6, `kubectl`, `Helm` ≥ 3.14, `Terraform` ≥ 1.6. El preflight
-de `make up` los comprueba y enlaza la instalación de lo que falte.
+Docker, `k3d` ≥ 5.6, `kubectl`, `Helm` ≥ 3.14, `Terraform` ≥ 1.6. The `make up`
+preflight checks them and links installation for what's missing.
 
-También `make`, en una WSL2 recién instalada no lo trae🤓:
-`sudo apt install make`. O usa `scripts/` directamente si pasas de instalaciones extra:
+Also `make`, a fresh WSL2 install doesn't have it🤓:
+`sudo apt install make`. Or use `scripts/` directly if you don't want extra installs:
 
-| `make` | equivalente |
+| `make` | equivalent |
 | --- | --- |
 | `make up` | `./scripts/up.sh` |
 | `make down` | `./scripts/down.sh` |
@@ -142,28 +140,28 @@ También `make`, en una WSL2 recién instalada no lo trae🤓:
 | `make security` | `./scripts/security.sh` |
 | `PROFILE=cpu make up` | `PROFILE=cpu ./scripts/up.sh` |
 
-## Documentación
+## Documentation
 
-[docs/](docs/) — arquitectura, decisiones, runbook, guía de conexión para devs.
+[docs/](docs/) — architecture, decisions, runbook, dev connection guide.
 
-## Versiones Recientes
+## Recent Versions
 
-**v0.5.1** - Tempo UI + seguridad mejorada
-**v0.5.0** - Observabilidad completa con Tempo
+**v0.5.1** - Tempo UI + better security
+**v0.5.0** - Complete observability with Tempo
 **v0.4.0** - NetworkPolicies + Reloader + Presidio
-**v0.3.1** - Open WebUI + licencia
+**v0.3.1** - Open WebUI + license
 
-## Licencia
+## License
 
-NullNode es open source. Nació como mi laboratorio personal para aprender y trastear con LLMOps, y lo publico porque puede serle útil a alguien más.
+NullNode is open source. It started as my personal lab to learn and play with LLMOps, and I publish it because it might be useful to someone else.
 
-**La idea es que se quede así, abierto.**  Sientete libre de forkearlo, mandar una mejora, arreglar algo o simplemente proponer una idea :)
+**The idea is to keep it open.** Feel free to fork it, send an improvement, fix something, or just propose an idea :)
 
-Y si te sirve, con una ⭐ de sobra.
+And if it helps you, a ⭐ is more than enough.
 
 <p align="center">
-  <img src="docs/media/NullNode-mii.gif" alt="Mii de NullNode" width="10%">
-  <img src="docs/media/NullNode-tepig.gif" alt="Tepig de NullNode" width="6%">
+  <img src="docs/media/NullNode-mii.gif" alt="NullNode Mii" width="10%">
+  <img src="docs/media/NullNode-tepig.gif" alt="NullNode Tepig" width="6%">
 </p>
 
 <p align="center">DavidNull 🐰</p>

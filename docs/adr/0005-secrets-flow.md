@@ -1,15 +1,12 @@
-# 0005 - Flujo de secretos: Terraform genera, Secrets Manager guarda, Kubernetes consume
+# 0005 - Secrets flow: Terraform generates, Secrets Manager stores, Kubernetes consumes
 
-**Estado:** aceptada · **Fecha:** 2026-08-26
+**Status:** accepted · **Date:** 2026-08-26
 
-> **Actualización (2026-09-17):** la proyección a Kubernetes ya no la hace el
-> `data source` de Terraform sino External Secrets Operator, sobre el mismo
-> secreto de Secrets Manager. El origen y la forma del flujo no cambian.
-> Ver [ADR-0007](0007-external-secrets-operator.md).
+> **Update (2026-09-17):** Kubernetes projection is no longer done by Terraform's `data source` but by External Secrets Operator, over the same Secrets Manager secret. The source and flow shape don't change. See [ADR-0007](0007-external-secrets-operator.md).
 
-## Contexto
+## Context
 
-La plantilla tenía esto en `k8s/platform/litellm/values.yaml`, commiteado:
+The template had this in `k8s/platform/litellm/values.yaml`, committed:
 
 ```yaml
 environment:
@@ -18,52 +15,42 @@ environment:
   DATABASE_URL: "postgresql://user:password@postgres..."
 ```
 
-Y el mismo valor duplicado a mano en el secreto de Secrets Manager. Dos
-fuentes de verdad, ninguna rotable, ambas en git.
+And the same value manually duplicated in the Secrets Manager secret. Two sources of truth, neither rotatable, both in git.
 
-## Decisión
+## Decision
 
-Una sola dirección de flujo, sin vuelta atrás:
+Single direction of flow, no going back:
 
 ```bash
 random_password (Terraform)
       │
       ▼
-AWS Secrets Manager mockeado          ← única fuente de verdad
-      │  (data source, solo lectura)
+AWS Secrets Manager mocked          ← single source of truth
+      │  (data source, read-only)
       ▼
-Secret de Kubernetes                  ← creado por platform-bootstrap
+Kubernetes Secret                  ← created by platform-bootstrap
       │  (secretKeyRef)
       ▼
 Pod (LiteLLM / Postgres / Redis / Grafana)
 ```
 
-Concretamente:
+Specifically:
 
-- `infra/terraform/cloud-mock/secrets.tf` genera master key, salt key y las
-  contraseñas de Postgres, Redis y Grafana con `random_password`, y las guarda
-  en `nullnode/platform/credentials`.
-- `infra/terraform/platform-bootstrap/secrets.tf` las lee con un data source y
-  crea los Secrets de Kubernetes.
-- Ningún chart genera contraseñas. Todos consumen `existingSecret`.
-- Las claves por departamento las acuña el Job de bootstrap en
-  `nullnode/litellm/department-keys`. Terraform es dueño del secreto, no de su
-  contenido (`lifecycle.ignore_changes`), para que el Job pueda rotarlas.
+- `infra/terraform/cloud-mock/secrets.tf` generates master key, salt key, and Postgres, Redis, and Grafana passwords with `random_password`, and stores them in `nullnode/platform/credentials`.
+- `infra/terraform/platform-bootstrap/secrets.tf` reads them with a data source and creates Kubernetes Secrets.
+- No chart generates passwords. All consume `existingSecret`.
+- Department keys are minted by the bootstrap job in `nullnode/litellm/department-keys`. Terraform owns the secret, not its content (`lifecycle.ignore_changes`), so the job can rotate them.
 
-## Consecuencias
+## Consequences
 
-### A favor
+### Pros
 
-- Rotar la plataforma es `terraform taint` + `apply`.
-- Ni un valor con forma de credencial en el repositorio.
-- Es la forma del flujo que usarías en real: en lugar del data source, External
-  Secrets Operator sobre el mismo secreto. Se sustituye una pieza.
+- Rotating the platform is `terraform taint` + `apply`.
+- No credential-shaped value in the repository.
+- This is the flow shape you'd use in real life: instead of the data source, External Secrets Operator over the same secret. One piece to replace.
 
-### En contra
+### Cons
 
-- Los secretos están en claro en el estado local de Terraform. Aceptable en un
-  lab, cubierto por `.gitignore`; en real exige backend remoto cifrado.
-- Si el contenedor de LocalStack se reinicia, Terraform genera valores nuevos e
-  invalida las claves de departamento repartidas.
-- Los Secrets de Kubernetes son base64, no cifrado: aquí no hay etcd encryption
-  at rest.
+- Secrets are in clear in Terraform's local state. Acceptable in a lab, covered by `.gitignore`; in production requires encrypted remote backend.
+- If the LocalStack container restarts, Terraform generates new values and invalidates re-issued department keys.
+- Kubernetes Secrets are base64, not encrypted: no etcd encryption at rest here.

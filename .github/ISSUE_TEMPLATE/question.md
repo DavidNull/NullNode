@@ -7,18 +7,18 @@ assignees: ''
 ---
 
 ## Your Question
-Describe claramente tu pregunta sobre NullNode.
+Describe your question about NullNode clearly.
 
 ## Context
-Proporciona contexto sobre tu situación actual:
-- ¿Qué estás tratando de hacer?
-- ¿Qué has intentado ya?
-- ¿Qué documentación has revisado?
+Provide context about your current situation:
+- What are you trying to do?
+- What have you tried already?
+- What documentation have you reviewed?
 
 ## Environment
-- Sistema operativo: [ej. Ubuntu 22.04, Windows 11 con WSL2]
-- Versiones relevantes:
-  - Docker: [ej. 24.0.0]
-  - k3d: [ej. 5.6.0]
-  - Helm: [ej. 3.14.0]
-  - Terraform: [ej. 1.6.0]
+- Operating system: [e.g. Ubuntu 22.04, Windows 11 with WSL2]
+- Relevant versions:
+  - Docker: [e.g. 24.0.0]
+  - k3d: [e.g. 5.6.0]
+  - Helm: [e.g. 3.14.0]
+  - Terraform: [e.g. 1.6.0]

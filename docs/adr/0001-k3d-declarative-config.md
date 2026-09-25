@@ -1,44 +1,36 @@
-# 0001 - El clúster se crea con el config declarativo de k3d
+# 0001 - The cluster is created with k3d's declarative config
 
-**Estado:** aceptada · **Fecha:** 2026-08-26
+**Status:** accepted · **Date:** 2026-08-26
 
-## Contexto
+## Context
 
-La plantilla usaba el provider `pvotal-tech/k3d`. Coherente sobre el papel: si
-todo es IaC, el clúster también.
+The template used the `pvotal-tech/k3d` provider. Consistent with the role: if everything is IaC, the cluster should be too.
 
-En la práctica es un provider comunitario con poco mantenimiento, va por detrás
-del esquema de k3d y no cubre opciones necesarias aquí
-(`options.runtime.gpuRequest`, filtros de nodo en volúmenes, registry). Es una
-dependencia frágil en la capa que tiene que funcionar antes que todo lo demás.
+In practice it's a community provider with little maintenance, lags behind k3d's schema, and doesn't cover necessary options here (`options.runtime.gpuRequest`, node filters on volumes, registry). It's a fragile dependency in the layer that has to work before everything else.
 
-## Decisión
+## Decision
 
-El clúster se crea con `k3d cluster create --config infra/k3d/nullnode-<perfil>.yaml`.
+The cluster is created with `k3d cluster create --config infra/k3d/nullnode-<profile>.yaml`.
 
-Terraform sigue siendo el motor de IaC de todo lo demás:
+Terraform remains the IaC engine for everything else:
 
-- `infra/terraform/cloud-mock` → contenedor de LocalStack y recursos AWS.
-- `infra/terraform/platform-bootstrap` → namespaces, secretos, ArgoCD y el
-  Application raíz.
+- `infra/terraform/cloud-mock` → LocalStack container and AWS resources.
+- `infra/terraform/platform-bootstrap` → namespaces, secrets, ArgoCD and the root Application.
 
-## Consecuencias
+## Consequences
 
-### A favor
+### Pros
 
-- El fichero de k3d es declarativo y versionado: no perdemos IaC.
-- Todas las opciones de k3d disponibles, incluida la de GPU.
-- Una dependencia menos en el arranque.
+- The k3d config file is declarative and versioned: we don't lose IaC.
+- All k3d options available, including GPU.
+- One less dependency at startup.
 
-### En contra
+### Cons
 
-- El clúster no está en el estado de Terraform, así que `up.sh` comprueba si
-  existe (`cluster_exists()`).
-- Dos herramientas en el arranque en lugar de una.
+- The cluster isn't in Terraform state, so `up.sh` checks if it exists (`cluster_exists()`).
+- Two tools at startup instead of one.
 
-## Alternativas descartadas
+## Discarded alternatives
 
-- **kind:** no expone GPU con la misma facilidad y perderíamos el balanceador
-  que k3d monta para el Ingress.
-- **`null_resource` con `local-exec`:** mete el clúster en el estado sin las
-  garantías de un recurso real.
+- **kind:** doesn't expose GPU as easily and we'd lose the load balancer k3d mounts for Ingress.
+- **`null_resource` with `local-exec`:** puts the cluster in state without the guarantees of a real resource.

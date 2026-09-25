@@ -1,115 +1,74 @@
-# NullNode — contexto y visión de arquitectura
+# NullNode — context and architecture vision
 
-## Qué es
+## What it is
 
-Una plataforma LLMOps que corre en una estación de trabajo. El objetivo no es
-tener un LLM local: es tener el entorno de control que rodea a un LLM en
-producción, con las mismas piezas y los mismos compromisos, en una máquina donde
-romperlo no cuesta nada.
+An LLMOps platform that runs on a workstation. The goal isn't to have a local LLM: it's to have the control environment that surrounds an LLM in production, with the same pieces and the same trade-offs, on a machine where breaking it costs nothing.
 
-Modelos privados, gobierno vía AI Gateway, caché de prompts, autoescalado sobre
-la señal correcta y observabilidad SRE de GenAI (TTFT, tokens/s, hit rate, gasto
-por equipo, VRAM). Coste: 0 €, con los servicios de AWS mockeados.
+Private models, governance via AI Gateway, prompt cache, auto-scaling on the right signal, and GenAI SRE observability (TTFT, tokens/s, hit rate, spend per team, VRAM). Cost: 0€, with AWS services mocked.
 
-## Principio de diseño
+## Design principle
 
-Parecerse a producción donde importa, y ser explícito donde no puede.
+Look like production where it matters, and be explicit where it can't.
 
-Lo primero: GitOps real (un `Application` raíz, el resto se reconcilia), secretos
-fuera de git, un punto de entrada, versiones pinneadas, dashboards contra
-métricas que existen.
+First: real GitOps (one root `Application`, everything else reconciles), secrets outside git, single entry point, pinned versions, dashboards against metrics that exist.
 
-Lo segundo: dejar escrito dónde el lab se desvía y por qué. LocalStack Community
-no persiste, una GPU no se reparte entre pods, los secretos están en claro en el
-estado de Terraform. Está en las ADRs, no escondido.
+Second: write down where the lab deviates and why. LocalStack Community doesn't persist, a GPU can't be shared between pods, secrets are in clear in Terraform state. It's in the ADRs, not hidden.
 
-De ahí un corolario: mejor ausente y anotado que presente y no funcional. La
-versión anterior declaraba seis fases completas sobre componentes que no
-existían; el registro está en [AUDITORIA-PLANTILLA.md](AUDITORIA-PLANTILLA.md).
+From this a corollary: better absent and documented than present and non-functional. The previous version declared six complete phases over components that didn't exist; the record is in [AUDITORIA-PLANTILLA.md](AUDITORIA-PLANTILLA.md).
 
-## Capas
+## Layers
 
-### 1. Control y gateway — LiteLLM + Redis + PostgreSQL
+### 1. Control and gateway — LiteLLM + Redis + PostgreSQL
 
-Todas las peticiones entran por aquí. El gateway valida la clave virtual,
-comprueba presupuesto y límites del equipo, aplica el guardrail de PII, resuelve
-por caché si puede, enruta al pool si no, y registra gasto, traza, métrica y
-auditoría.
+All requests go through here. The gateway validates the virtual key, checks department budget and limits, applies PII guardrail, resolves by cache if it can, routes to the pool if not, and logs spend, trace, metric, and audit.
 
-Las tres piezas son inseparables:
+The three pieces are inseparable:
 
-- **Redis** no es solo caché: el router `least-busy` y los contadores de rate
-  limit necesitan estado compartido entre réplicas. Sin él, cada pod decide con
-  su visión parcial y los límites son incorrectos.
-- **PostgreSQL** es lo que hace reales las cuotas por departamento. Equipos,
-  claves y presupuestos viven ahí, sobreviven a un reinicio y se cambian por API
-  sin redespliegue.
+- **Redis** isn't just cache: the `least-busy` router and rate limit counters need shared state between replicas. Without it, each pod decides with its partial view and limits are wrong.
+- **PostgreSQL** is what makes department quotas real. Teams, keys, and budgets live there, survive restarts, and change via API without redeployment.
 
-### 2. Ejecución — Ollama
+### 2. Execution — Ollama
 
-StatefulSet, no Deployment: el `storageClass` local sólo da `ReadWriteOnce`, así
-que cada réplica necesita su propio volumen. Los pesos se descargan en un
-initContainer, de modo que `Ready` significa "ya tiene sus modelos".
+StatefulSet, not Deployment: the local `storageClass` only gives `ReadWriteOnce`, so each replica needs its own volume. Weights are downloaded in an initContainer, so `Ready` means "it already has its models".
 
-### 3. Escalado — KEDA
+### 3. Scaling — KEDA
 
-Escala según peticiones por segundo en el gateway, no según CPU: un servidor
-bloqueado esperando a la GPU puede estar al 15% de CPU y saturado.
+Scales by requests per second at the gateway, not by CPU: a server blocked waiting for GPU can be at 15% CPU and saturated.
 
-Con una sola GPU el techo es una réplica, así que aquí KEDA vale por el escalado
-a cero —liberar VRAM cuando no hay tráfico— más que por el escalado a N
-([ADR-0004](../adr/0004-scaling-signal.md)).
+With a single GPU the ceiling is one replica, so here KEDA is worth it for scale-to-zero — freeing VRAM when there's no traffic — more than scaling to N ([ADR-0004](../adr/0004-scaling-signal.md)).
 
-### 4. Observabilidad — Prometheus, Grafana, OpenTelemetry, DCGM
+### 4. Observability — Prometheus, Grafana, OpenTelemetry, DCGM
 
-Tres dashboards, uno por pregunta:
+Three dashboards, one per question:
 
-- **Golden Signals**: ¿está sano? Tasa, errores, TTFT, tokens/s, hit rate.
-- **FinOps y gobierno**: ¿quién consume y cuánto le queda de presupuesto?
-- **Inference Runtime**: ¿qué hace el pool? Réplicas, decisiones de KEDA, VRAM.
+- **Golden Signals**: Is it healthy? Rate, errors, TTFT, tokens/s, hit rate.
+- **FinOps and governance**: Who consumes and how much budget do they have left?
+- **Inference Runtime**: What's the pool doing? Replicas, KEDA decisions, VRAM.
 
-Las reglas de grabación son la única definición de cada señal, así que paneles y
-alertas no pueden contradecirse. Las trazas OTLP alimentan un conector
-`spanmetrics` como red de seguridad si el callback de Prometheus no está
-disponible ([ADR-0006](../adr/0006-metrics-sources.md)).
+Recording rules are the only definition of each signal, so panels and alerts can't contradict. OTLP traces feed a `spanmetrics` connector as a safety net if the Prometheus callback isn't available ([ADR-0006](../adr/0006-metrics-sources.md)).
 
 ### 5. GitOps — ArgoCD
 
-Un `AppProject` y un `Application` raíz es todo lo imperativo. Ese raíz apunta a
-un chart app-of-apps donde cada template es otra `Application`, ordenadas por
-sync waves: CRDs y operadores, datastores, runtime de modelos, gateway,
-dashboards.
+One `AppProject` and one root `Application` is all the imperative. That root points to an app-of-apps chart where each template is another `Application`, ordered by sync waves: CRDs and operators, datastores, model runtime, gateway, dashboards.
 
-Los charts de terceros no se forkean: se consumen con el patrón multi-source
-`$values`, que permite versionar los values aquí sin tocar el chart.
+Third-party charts aren't forked: they're consumed with the multi-source `$values` pattern, which allows versioning values here without touching the chart.
 
-### 6. Infraestructura — Terraform + k3d
+### 6. Infrastructure — Terraform + k3d
 
-Dos stacks con una frontera clara:
+Two stacks with a clear boundary:
 
-- **`cloud-mock`**: el proveedor cloud simulado. Contenedor de LocalStack más los
-  recursos de S3 y Secrets Manager. Vive fuera del clúster porque el clúster no
-  puede depender de algo que necesita antes de existir
-  ([ADR-0002](../adr/0002-localstack-outside-the-cluster.md)).
-- **`platform-bootstrap`**: namespaces, el puente de secretos, ArgoCD y el
-  Application raíz.
+- **`cloud-mock`**: the simulated cloud provider. LocalStack container plus S3 and Secrets Manager resources. Lives outside the cluster because the cluster can't depend on something that needs to exist before it does ([ADR-0002](../adr/0002-localstack-outside-the-cluster.md)).
+- **`platform-bootstrap`**: namespaces, the secrets bridge, ArgoCD and the root Application.
 
-El clúster en sí se crea con el fichero de configuración declarativo de k3d, no
-con un provider de Terraform ([ADR-0001](../adr/0001-k3d-declarative-config.md)).
+The cluster itself is created with k3d's declarative config file, not a Terraform provider ([ADR-0001](../adr/0001-k3d-declarative-config.md)).
 
-### 7. Cloud mockeado — LocalStack
+### 7. Mocked cloud — LocalStack
 
-No es decoración: de aquí sale la seguridad de la plataforma.
+Not decoration: this is where the platform's security comes from.
 
-- **Secrets Manager** guarda las credenciales que genera Terraform y las claves
-  virtuales del Job de bootstrap. Ningún chart genera contraseñas
-  ([ADR-0005](../adr/0005-secrets-flow.md)).
-- **S3** recibe la auditoría de cada petición (callback `s3`), con ciclo de vida
-  que expira los logs a los 30 días: son la clase de objeto que crece más rápido
-  y que nadie purga.
+- **Secrets Manager** stores the credentials Terraform generates and the virtual keys from the bootstrap job. No chart generates passwords ([ADR-0005](../adr/0005-secrets-flow.md)).
+- **S3** receives the audit of every request (`s3` callback), with lifecycle that expires logs after 30 days: these are the fastest-growing object class and nobody cleans them up.
 
-## Perfiles de hardware
+## Hardware profiles
 
-`PROFILE=gpu` (por defecto) y `PROFILE=cpu` seleccionan el fichero de values y
-la imagen del nodo k3d. Cambian el modelo, los recursos, la concurrencia y los
-límites de escalado; el resto es idéntico.
+`PROFILE=gpu` (default) and `PROFILE=cpu` select the values file and the k3d node image. They change the model, resources, concurrency, and scaling limits; the rest is identical.
