@@ -14,9 +14,13 @@
   <img src="https://img.shields.io/badge/PostgreSQL-Database-4169E1?style=flat-square&logo=postgresql&logoColor=white" alt="PostgreSQL">
   <img src="https://img.shields.io/badge/Prometheus-Metrics-E6522C?style=flat-square&logo=prometheus&logoColor=white" alt="Prometheus">
   <img src="https://img.shields.io/badge/Grafana-Dashboards-F46800?style=flat-square&logo=grafana&logoColor=white" alt="Grafana">
+  <img src="https://img.shields.io/badge/Tempo-Tracing-5D3FD3?style=flat-square&logo=grafana&logoColor=white" alt="Tempo">
   <img src="https://img.shields.io/badge/OpenTelemetry-Tracing-000000?style=flat-square&logo=opentelemetry&logoColor=white" alt="OpenTelemetry">
+  <img src="https://img.shields.io/badge/Open%20WebUI-Chat-000000?style=flat-square&logo=openai&logoColor=white" alt="Open WebUI">
+  <img src="https://img.shields.io/badge/Presidio-PII-FFA500?style=flat-square&logo=microsoft&logoColor=white" alt="Presidio">
   <img src="https://img.shields.io/badge/LocalStack-AWS%20Mock-000000?style=flat-square&logo=localstack&logoColor=white" alt="LocalStack">
   <img src="https://img.shields.io/badge/External%20Secrets-Rotation-5B4FC0?style=flat-square&logo=kubernetes&logoColor=white" alt="External Secrets Operator">
+  <img src="https://img.shields.io/badge/Reloader-Secrets-3B82F6?style=flat-square&logo=kubernetes&logoColor=white" alt="Reloader">
 </p>
 
 The idea came from something pretty specific: a group of people at home who want their own lightweight AI (because with home resources you can't do much more), without paying a cent, and with real control over who spends what and when. Governance, basically.
@@ -43,6 +47,18 @@ Everything mocked: AWS, S3, Bedrock, etc.
 </p>
 
 ---
+
+## Architecture
+
+<p align="center">
+  <img src="docs/media/nullnode-architecture.svg" alt="NullNode architecture diagram" width="90%">
+</p>
+
+The diagram shows the full stack: Ingress (Traefik), Control & Governance (LiteLLM, PostgreSQL, Redis), Execution (Ollama, Presidio), Observability (Prometheus, Grafana, Tempo, OTel), Secrets (External Secrets Operator, Reloader), GitOps (ArgoCD), Mock Cloud (LocalStack), and Infrastructure (Terraform, k3d).
+
+### Typical Request Flow
+
+Client → Traefik → LiteLLM (validates key + budget, checks cache) → Ollama (inference) → back through LiteLLM → updates Postgres, sends metrics/traces/audit.
 
 ## Before you start
 
@@ -92,30 +108,58 @@ dashboards and the KEDA trigger ([ADR-0006](docs/adr/0006-metrics-sources.md)).
 
 ## Architecture
 
-<!-- architecture diagram (needs to be designed) -->
 <p align="center">
-  <img src="docs/media/Arquitectura_NullNode.png" alt="NullNode architecture diagram" width="90%">
+  <img src="docs/media/nullnode-architecture.svg" alt="NullNode architecture diagram" width="90%">
 </p>
 
-<small>📝 Note: The diagram shows the base architecture v0.1.0. Recent versions include additional components like Open WebUI (optional chat interface) and External Secrets Operator (automatic secret rotation). Check the components table for the complete current architecture.</small>
+The platform is organized in layers:
 
-A request: goes through Traefik → LiteLLM validates the department key and budget
-→ checks cache in Redis → if miss, routes to Ollama → logs spend in Postgres,
-trace in collector, metric in Prometheus and the full request in S3.
+### Ingress Layer
+- **Traefik** (comes with k3s): Single entry point on port 8080
+  - Routes by host: `gateway.nullnode.localhost`, `chat.nullnode.localhost`, `grafana.nullnode.localhost`, etc.
 
-| Layer | Component | What it does |
-| --- | --- | --- |
-| Gateway | LiteLLM | OpenAI-compatible endpoint. Virtual keys per department with budget, TPM and RPM. Cache, PII guardrail, audit. |
-| Cache | Redis | Prompt cache and shared router state. |
-| Governance | PostgreSQL | Teams, keys and budgets. Survives restarts and changes via API. |
-| Inference | Ollama | StatefulSet with model cache per replica and weight preloading. |
-| Scaling | KEDA | Scales by requests per second, not by CPU. |
-| Observability | Prometheus, Grafana, OTel, DCGM | TTFT, tokens/s, hit rate, spend per team, VRAM. |
-| Guardrails | Presidio | PII detection and masking. Optional. |
-| Cloud mock | LocalStack | S3 (request audit) and Secrets Manager (credentials source). |
-| Secrets | External Secrets Operator | Syncs credentials from Secrets Manager to Kubernetes Secrets. Rotating is changing the source, no `terraform apply` ([ADR-0007](docs/adr/0007-external-secrets-operator.md)). |
-| GitOps | ArgoCD | App-of-apps with sync waves, single root Application. |
-| IaC | Terraform, k3d | Two stacks: mocked cloud and platform bootstrap. |
+### Control & Governance Layer
+- **LiteLLM Gateway**: OpenAI-compatible endpoint with department keys, budgets, rate limits, PII guardrail, cache integration
+- **PostgreSQL**: Stores teams, virtual keys, budgets and spend history
+- **Redis**: Prompt cache and shared router state
+
+### Execution Layer
+- **Ollama**: StatefulSet with per-replica model cache and weight preloading
+- **Presidio**: PII detection and masking (GPU profile)
+
+### Observability Layer
+- **Prometheus + Grafana**: Metrics, dashboards (Golden Signals, FinOps, Inference Runtime, Traces)
+- **Tempo**: Distributed tracing backend with query UI
+- **OpenTelemetry Collector**: Receives traces, derives RED metrics as fallback
+- **DCGM Exporter**: VRAM metrics (GPU profile)
+
+### Secrets Layer
+- **External Secrets Operator**: Syncs credentials from LocalStack Secrets Manager to Kubernetes Secrets
+- **Reloader**: Restarts pods when secrets change (automatic rotation)
+
+### GitOps Layer
+- **ArgoCD**: App-of-apps with sync waves, single root Application, multi-source `$values` pattern
+
+### Mock Cloud Layer
+- **LocalStack**: S3 (request audit with 30-day lifecycle) and Secrets Manager (credentials source)
+
+### Infrastructure Layer
+- **Terraform**: Two stacks (`cloud-mock` and `platform-bootstrap`)
+- **k3d**: Declarative cluster config with GPU and CPU profiles
+
+### Typical Request Flow
+
+1. Client (VS Code, Open WebUI, SDK) → Traefik → LiteLLM
+2. LiteLLM validates key → checks budget in PostgreSQL
+3. If enabled, Presidio anonymizes PII
+4. LiteLLM checks cache in Redis → if hit, returns cached
+5. If miss, LiteLLM router → Ollama (least-busy)
+6. Ollama executes inference on GPU/CPU
+7. LiteLLM:
+   - Updates spend in PostgreSQL
+   - Sends metrics to Prometheus
+   - Sends traces to OTel Collector → Tempo
+   - Sends audit to S3 (LocalStack)
 
 <br>
 <p align="center">
@@ -157,7 +201,7 @@ NullNode is open source. It started as my personal lab to learn and play with LL
 
 **The idea is to keep it open.** Feel free to fork it, send an improvement, fix something, or just propose an idea :)
 
-And if it helps you, a ⭐ is more than enough.
+If this project helps you in any way, a ⭐ would mean a lot.
 
 <p align="center">
   <img src="docs/media/NullNode-mii.gif" alt="NullNode Mii" width="10%">
