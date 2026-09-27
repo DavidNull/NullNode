@@ -56,6 +56,46 @@ Everything mocked: AWS, S3, Bedrock, etc.
 
 The diagram shows the full stack: Ingress (Traefik), Control & Governance (LiteLLM, PostgreSQL, Redis), Execution (Ollama, Presidio), Observability (Prometheus, Grafana, Tempo, OTel), Secrets (External Secrets Operator, Reloader), GitOps (ArgoCD), Mock Cloud (LocalStack), and Infrastructure (Terraform, k3d).
 
+### Ingress Layer
+
+- **Traefik**: Single entry point, routes by host
+
+### Control & Governance Layer
+
+- **LiteLLM**: Gateway with keys, budgets, cache
+- **PostgreSQL**: Teams, keys, budgets
+- **Redis**: Prompt cache
+
+### Execution Layer
+
+- **Ollama**: Inference with model cache
+- **Presidio**: PII masking (GPU)
+
+### Observability Layer
+
+- **Prometheus + Grafana**: Metrics and dashboards
+- **Tempo**: Distributed tracing
+- **OTel Collector**: Trace processing
+- **DCGM Exporter**: VRAM metrics (GPU)
+
+### Secrets Layer
+
+- **External Secrets Operator**: Syncs credentials
+- **Reloader**: Auto-restart on secret change
+
+### GitOps Layer
+
+- **ArgoCD**: GitOps deployment
+
+### Mock Cloud Layer
+
+- **LocalStack**: AWS services mock
+
+### Infrastructure Layer
+
+- **Terraform**: IaC stacks
+- **k3d**: Cluster config
+
 ### Typical Request Flow
 
 Client → Traefik → LiteLLM (validates key + budget, checks cache) → Ollama (inference) → back through LiteLLM → updates Postgres, sends metrics/traces/audit.
@@ -106,62 +146,6 @@ dashboards and the KEDA trigger ([ADR-0006](docs/adr/0006-metrics-sources.md)).
 
 ---
 
-## Architecture
-
-<p align="center">
-  <img src="docs/media/nullnode-architecture.svg" alt="NullNode architecture diagram" width="90%">
-</p>
-
-The platform is organized in layers:
-
-### Ingress Layer
-- **Traefik** (comes with k3s): Single entry point on port 8080
-  - Routes by host: `gateway.nullnode.localhost`, `chat.nullnode.localhost`, `grafana.nullnode.localhost`, etc.
-
-### Control & Governance Layer
-- **LiteLLM Gateway**: OpenAI-compatible endpoint with department keys, budgets, rate limits, PII guardrail, cache integration
-- **PostgreSQL**: Stores teams, virtual keys, budgets and spend history
-- **Redis**: Prompt cache and shared router state
-
-### Execution Layer
-- **Ollama**: StatefulSet with per-replica model cache and weight preloading
-- **Presidio**: PII detection and masking (GPU profile)
-
-### Observability Layer
-- **Prometheus + Grafana**: Metrics, dashboards (Golden Signals, FinOps, Inference Runtime, Traces)
-- **Tempo**: Distributed tracing backend with query UI
-- **OpenTelemetry Collector**: Receives traces, derives RED metrics as fallback
-- **DCGM Exporter**: VRAM metrics (GPU profile)
-
-### Secrets Layer
-- **External Secrets Operator**: Syncs credentials from LocalStack Secrets Manager to Kubernetes Secrets
-- **Reloader**: Restarts pods when secrets change (automatic rotation)
-
-### GitOps Layer
-- **ArgoCD**: App-of-apps with sync waves, single root Application, multi-source `$values` pattern
-
-### Mock Cloud Layer
-- **LocalStack**: S3 (request audit with 30-day lifecycle) and Secrets Manager (credentials source)
-
-### Infrastructure Layer
-- **Terraform**: Two stacks (`cloud-mock` and `platform-bootstrap`)
-- **k3d**: Declarative cluster config with GPU and CPU profiles
-
-### Typical Request Flow
-
-1. Client (VS Code, Open WebUI, SDK) → Traefik → LiteLLM
-2. LiteLLM validates key → checks budget in PostgreSQL
-3. If enabled, Presidio anonymizes PII
-4. LiteLLM checks cache in Redis → if hit, returns cached
-5. If miss, LiteLLM router → Ollama (least-busy)
-6. Ollama executes inference on GPU/CPU
-7. LiteLLM:
-   - Updates spend in PostgreSQL
-   - Sends metrics to Prometheus
-   - Sends traces to OTel Collector → Tempo
-   - Sends audit to S3 (LocalStack)
-
-<br>
 <p align="center">
   <img src="docs/media/grafana.png" alt="Grafana dashboards: GenAI, spend and VRAM" width="80%">
 </p>
@@ -190,6 +174,7 @@ Also `make`, a fresh WSL2 install doesn't have it🤓:
 
 ## Recent Versions
 
+**v0.5.2** - English documentation + updated architecture svg
 **v0.5.1** - Tempo UI + better security
 **v0.5.0** - Complete observability with Tempo
 **v0.4.0** - NetworkPolicies + Reloader + Presidio
