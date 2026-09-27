@@ -1,19 +1,18 @@
-# Test de humo
+# Smoke test
 
-Vive en [`scripts/smoke.sh`](../../scripts/smoke.sh), no aquí, porque usa la
-librería compartida de shell y forma parte del flujo del operador
-(`make smoke`).
+Lives in [`scripts/smoke.sh`](../../scripts/smoke.sh), not here, because it uses
+the shared shell library and is part of the operator flow (`make smoke`).
 
-No comprueba que los pods estén arriba: recorre la cadena completa.
+It doesn't check that pods are up: it walks the full chain.
 
-| Paso | Qué demuestra |
+| Step | What it proves |
 | --- | --- |
-| `/health/liveliness` | Ingress, enrutado de Traefik y el proceso del gateway |
-| `POST` sin autenticar | Que la autenticación se aplica de verdad |
-| `/v1/models` | Que el catálogo renderizado desde el values cargó |
-| `/v1/chat/completions` | Router, Ollama, pesos en disco, acceso a la GPU |
-| Repetir el mismo prompt | Que la caché de Redis está conectada y se usa |
-| `/metrics` | Que el callback de Prometheus está activo |
-| `s3://nullnode-model-vault/audit` | Que la auditoría llega a LocalStack |
+| `/health/liveliness` | Ingress, Traefik routing and the gateway process |
+| `POST` unauthenticated | That authentication is actually applied |
+| `/v1/models` | That the catalog rendered from the values loaded |
+| `/v1/chat/completions` | Router, Ollama, weights on disk, GPU access |
+| Repeat the same prompt | That the Redis cache is connected and used |
+| `/metrics` | That the Prometheus callback is active |
+| `s3://nullnode-model-vault/audit` | That the audit reaches LocalStack |
 
-Ejecutar después de `make up`, o en CI contra un clúster efímero.
+Run after `make up`, or in CI against an ephemeral cluster.

@@ -1,79 +1,78 @@
-# Versiones pinneadas
+# Pinned versions
 
-Todo pinneado a propósito: con `latest`, el entorno cambia entre dos `make up`
-y un fallo deja de ser reproducible.
+Everything pinned on purpose: with `latest`, the environment changes between two
+`make up` and a failure stops being reproducible.
 
-## Cómo verificarlas
+## How to verify them
 
 ```bash
 make versions-check
 ```
 
-Confirma que cada versión pinneada existe y avisa de la última disponible.
-Hazlo antes del primer despliegue: estas versiones se eligieron sin acceso a
-red.
+Confirms that each pinned version exists and warns about the latest available.
+Do this before first deployment: these versions were chosen without network
+access.
 
-[Renovate](../../renovate.json) mantiene los pins al día vía PR, incluidos los del
-`values.yaml` del app-of-apps mediante un custom manager.
+[Renovate](../../renovate.json) keeps pins up to date via PR, including those in
+the app-of-apps `values.yaml` via a custom manager.
 
-## Inventario
+## Inventory
 
-### Charts de terceros — `k8s/platform/values.yaml`
+### Third-party charts — `k8s/platform/values.yaml`
 
-| Chart | Versión | Repositorio |
+| Chart | Version | Repository |
 | --- | --- | --- |
 | `kube-prometheus-stack` | 65.5.1 | prometheus-community |
 | `keda` | 2.15.2 | kedacore |
 | `opentelemetry-collector` | 0.108.1 | open-telemetry |
-| `nvidia-device-plugin` | 0.17.0 | nvidia (solo perfil GPU) |
-| `dcgm-exporter` | 3.6.1 | nvidia (solo perfil GPU) |
+| `nvidia-device-plugin` | 0.17.0 | nvidia (GPU profile only) |
+| `dcgm-exporter` | 3.6.1 | nvidia (GPU profile only) |
 
 ### Bootstrap — `infra/terraform/platform-bootstrap/variables.tf`
 
-| Chart | Versión |
+| Chart | Version |
 | --- | --- |
 | `argo-cd` | 7.7.11 |
 
-### Imágenes de contenedor
+### Container images
 
-| Imagen | Tag | Dónde |
+| Image | Tag | Where |
 | --- | --- | --- |
-| `ghcr.io/berriai/litellm-non_root` | `main-v1.72.6-stable` | chart litellm |
-| `ollama/ollama` | `0.5.7` | chart ollama |
-| `redis` | `7.4-alpine` | chart redis |
-| `postgres` | `16.4-alpine` | chart postgres |
-| `oliver006/redis_exporter` | `v1.66.0` | chart redis |
-| `quay.io/prometheuscommunity/postgres-exporter` | `v0.15.0` | chart postgres |
-| `mcr.microsoft.com/presidio-analyzer` | `2.2.355` | chart presidio |
-| `mcr.microsoft.com/presidio-anonymizer` | `2.2.355` | chart presidio |
+| `ghcr.io/berriai/litellm-non_root` | `main-v1.72.6-stable` | litellm chart |
+| `ollama/ollama` | `0.5.7` | ollama chart |
+| `redis` | `7.4-alpine` | redis chart |
+| `postgres` | `16.4-alpine` | postgres chart |
+| `oliver006/redis_exporter` | `v1.66.0` | redis chart |
+| `quay.io/prometheuscommunity/postgres-exporter` | `v0.15.0` | postgres chart |
+| `mcr.microsoft.com/presidio-analyzer` | `2.2.355` | presidio chart |
+| `mcr.microsoft.com/presidio-anonymizer` | `2.2.355` | presidio chart |
 | `localstack/localstack` | `4.4.0` | cloud-mock |
-| `rancher/k3s` | `v1.31.2-k3s1` | perfil CPU / base de la imagen CUDA |
-| `python` | `3.12-alpine` | Job de bootstrap |
+| `rancher/k3s` | `v1.31.2-k3s1` | CPU profile / CUDA image base |
+| `python` | `3.12-alpine` | bootstrap job |
 
-### La variante `litellm-non_root`
+### The `litellm-non_root` variant
 
-La imagen estándar asume uid 0 y el pod corre con `runAsNonRoot: true`. Con la
-normal no arranca.
+The standard image assumes uid 0 and the pod runs with `runAsNonRoot: true`. With
+the normal one it doesn't start.
 
-### Actualizar LiteLLM
+### Updating LiteLLM
 
-Paso obligatorio: los nombres de las métricas cambian entre versiones menores
-(ADR-0006).
+Mandatory step: metric names change between minor versions (ADR-0006).
 
 ```bash
 kubectl -n nullnode-platform exec deploy/litellm -- \
   sh -c 'wget -qO- localhost:4000/metrics' | grep '^litellm_' | cut -d'{' -f1 | sort -u
 ```
 
-Comparar con las expresiones de `k8s/charts/nullnode-observability/` (paneles y
-reglas de grabación) y con el trigger de KEDA en el values de Ollama.
+Compare with the expressions in `k8s/charts/nullnode-observability/` (panels and
+recording rules) and with the KEDA trigger in the Ollama values.
 
-### LocalStack: por qué 4.x y no 3.8.1
+### LocalStack: why 4.x and not 3.8.1
 
-El provider de AWS (`~> 5.70`, que resuelve a 5.100) espera a que la
-configuración de lifecycle de S3 quede "estable" antes de dar por creado el
-recurso. LocalStack 3.8.1 nunca reporta ese estado, así que
-`aws_s3_bucket_lifecycle_configuration.vault` se cuelga y `terraform apply`
-falla a los 3 minutos — era lo que tumbaba el job de integración en CI. Con
-`4.4.0` el recurso se crea en ~1 min. Si se baja el pin de LocalStack, hay que
-bajar también el del provider a una versión previa a esa espera.
+The AWS provider (`~> 5.70`, which resolves to 5.100) waits for the S3 lifecycle
+configuration to become "stable" before considering the resource created.
+LocalStack 3.8.1 never reports that state, so
+`aws_s3_bucket_lifecycle_configuration.vault` hangs and `terraform apply` fails
+at 3 minutes — this was what took down the integration job in CI. With `4.4.0`
+the resource is created in ~1 min. If you lower the LocalStack pin, you also need
+to lower the provider to a version before that wait.

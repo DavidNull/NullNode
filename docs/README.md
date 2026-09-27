@@ -8,16 +8,16 @@ These four files are the project state in writing. They're committed for a purpo
 | --- | --- |
 | [CONTEXT.md](context/CONTEXT.md) | What the platform is and why it's built this way |
 | [GOTO.md](context/GOTO.md) | What's missing, in order |
-| [AVANCES.md](context/AVANCES.md) | What was done and when |
-| [AUDITORIA-PLANTILLA.md](context/AUDITORIA-PLANTILLA.md) | What was broken in the initial version |
+| [PROGRESS.md](context/PROGRESS.md) | What was done and when |
+| [TEMPLATE-AUDIT.md](context/TEMPLATE-AUDIT.md) | What was broken in the initial version |
 
-When closing a block of work, update `AVANCES.md` and `GOTO.md`. If the decision changes the architecture, also add an ADR.
+When closing a block of work, update `PROGRESS.md` and `GOTO.md`. If the decision changes the architecture, also add an ADR.
 
-## `uso/` — for the dev consuming the platform
+## `usage/` — for the dev consuming the platform
 
 | File | What it's for |
 | --- | --- |
-| [CONECTAR.md](uso/CONECTAR.md) | Connect VS Code (Continue, Cline), Open WebUI, SDKs, and what name resolves from where |
+| [CONNECT.md](usage/CONNECT.md) | Connect VS Code (Continue, Cline), Open WebUI, SDKs, and what name resolves from where |
 
 ## `ops/` — for whoever operates it
 

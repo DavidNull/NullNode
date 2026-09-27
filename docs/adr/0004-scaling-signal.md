@@ -1,50 +1,50 @@
-# 0004 - Señal de autoescalado: KEDA para inferencia, HPA para el gateway
+# 0004 - Autoscaling signal: KEDA for inference, HPA for gateway
 
-**Estado:** aceptada · **Fecha:** 2026-08-26
+**Status:** accepted · **Date:** 2026-08-26
 
-## Contexto
+## Context
 
-La plantilla tenía un `ScaledObject` con trigger de Redis sobre la lista
-`litellm:queue`. Esa lista no existe: LiteLLM usa Redis como caché y estado del
-router, no como cola. El escalador habría leído 0 siempre.
+The template had a `ScaledObject` with a Redis trigger on the `litellm:queue`
+list. That list doesn't exist: LiteLLM uses Redis as cache and router state,
+not as a queue. The scaler would have always read 0.
 
-El gateway, en paralelo, tenía un HPA sobre CPU y memoria al 80%.
+The gateway, in parallel, had an HPA on CPU and memory at 80%.
 
-## Decisión
+## Decision
 
-Dos señales distintas, por razones distintas:
+Two different signals, for different reasons:
 
-**Ollama → KEDA con trigger de Prometheus.** Mide peticiones por segundo hacia
-el pool. La señal correcta para un servidor de inferencia es la demanda que le
-llega: un pod bloqueado esperando a la GPU puede estar al 15% de CPU y saturado.
+**Ollama → KEDA with Prometheus trigger.** Measures requests per second to the
+pool. The correct signal for an inference server is the demand it receives: a
+pod blocked waiting for the GPU might be at 15% CPU and saturated.
 
-**LiteLLM → HPA sobre CPU.** Aquí la CPU sí mide algo: serialización JSON,
-conteo de tokens, llamadas a guardrails, escritura de logs.
+**LiteLLM → HPA on CPU.** Here CPU does measure something: JSON serialization,
+token counting, guardrail calls, log writing.
 
-## Con una sola GPU, escalar horizontalmente no sirve
+## With a single GPU, horizontal scaling doesn't help
 
-El device plugin asigna la GPU en exclusiva a un pod. Por tanto:
+The device plugin assigns the GPU exclusively to one pod. Therefore:
 
-- `maxReplicas: 1` en el perfil GPU. Una réplica extra se queda `Pending`.
-- La concurrencia se compra vertical: `OLLAMA_NUM_PARALLEL=4`.
-- El perfil CPU sí escala horizontal (`maxReplicas: 3`): los cores se reparten.
+- `maxReplicas: 1` in the GPU profile. An extra replica stays `Pending`.
+- Concurrency is bought vertically: `OLLAMA_NUM_PARALLEL=4`.
+- The CPU profile does scale horizontally (`maxReplicas: 3`): cores are shared.
 
-¿Para qué KEDA entonces? Por el escalado a cero. `autoscaling.scaleToZero`
-libera la VRAM cuando no hay tráfico, que en una estación de trabajo es lo que
-quieres para usar la GPU para otra cosa.
+Why KEDA then? For scale-to-zero. `autoscaling.scaleToZero` frees VRAM when
+there's no traffic, which on a workstation is what you want to use the GPU for
+something else.
 
-Está desactivado por defecto porque la petición que despierta el pool falla: el
-gateway conecta antes de que exista el pod. Con `router.numRetries: 3` y
-timeouts amplios se sobrevive, pero el primer usuario tras un rato de
-inactividad espera 30-60 segundos.
+It's disabled by default because the request that wakes the pool fails: the
+gateway connects before the pod exists. With `router.numRetries: 3` and wider
+timeouts you survive, but the first user after a period of inactivity waits
+30-60 seconds.
 
-## Consecuencias
+## Consequences
 
-- Escalar depende de que Prometheus esté sano. Si cae, KEDA mantiene la última
-  cuenta de réplicas: fallo seguro.
-- `restoreToOriginalReplicaCount: true` para que borrar el `ScaledObject` no
-  deje el StatefulSet clavado.
-- Ventana de bajada de 10 minutos: un model load cuesta decenas de segundos y
-  hacer flapping es peor que mantener un pod caliente.
-- ArgoCD ignora `/spec/replicas` (en `argocd.tf`). Sin eso, el self-heal y el
-  autoescalador se pelean por el campo.
+- Scaling depends on Prometheus being healthy. If it goes down, KEDA keeps the
+  last replica count: fail-safe.
+- `restoreToOriginalReplicaCount: true` so deleting the `ScaledObject` doesn't
+  leave the StatefulSet stuck.
+- 10-minute cooldown window: a model load takes tens of seconds and flapping is
+  worse than keeping a pod warm.
+- ArgoCD ignores `/spec/replicas` (in `argocd.tf`). Without that, self-heal and
+  the autoscaler fight over the field.

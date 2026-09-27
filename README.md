@@ -80,7 +80,7 @@ ArgoCD keeps reconciling in the background.
 ### 5. No chat UI
 
 `make up` exposes an OpenAI-compatible endpoint. Connect from VS Code with
-Continue or Cline: [docs/uso/CONECTAR.md](docs/uso/CONECTAR.md).
+Continue or Cline: [docs/usage/CONNECT.md](docs/usage/CONNECT.md).
 
 ### 6. Pinned versions without network verification
 

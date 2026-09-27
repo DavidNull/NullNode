@@ -1,48 +1,46 @@
-# 0006 - Métricas de LiteLLM, con las spanmetrics de OTel como red de seguridad
+# 0006 - LiteLLM metrics, with OTel spanmetrics as safety net
 
-**Estado:** aceptada · **Fecha:** 2026-08-26
+**Status:** accepted · **Date:** 2026-08-26
 
-## Contexto
+## Context
 
-El dashboard de la plantilla graficaba métricas inexistentes
+The template's dashboard graphed non-existent metrics
 (`litellm_request_duration_seconds_bucket`, `litellm_requests_total`,
-`litellm_tokens_generated_total`). Los nombres reales son otros
+`litellm_tokens_generated_total`). The real names are different
 (`litellm_proxy_total_requests_metric_total`,
-`litellm_llm_api_time_to_first_token_metric_bucket`). Y no estaba conectado a
-nada: el JSON estaba en el repo mientras Grafana provisionaba `gnetId: 1`, un
-dashboard público ajeno.
+`litellm_llm_api_time_to_first_token_metric_bucket`). And it wasn't connected
+to anything: the JSON was in the repo while Grafana provisioned `gnetId: 1`,
+a random public dashboard.
 
-De fondo hay un problema mayor: esos nombres cambian entre versiones menores de
-LiteLLM, y en algunas builds el callback de Prometheus está tras licencia
-enterprise.
+Underneath there's a bigger problem: those names change between LiteLLM minor
+versions, and in some builds the Prometheus callback is behind an enterprise
+license.
 
-## Decisión
+## Decision
 
-**Primaria:** el callback `prometheus` de LiteLLM, vía ServiceMonitor. Es la
-única fuente de TTFT, tokens, gasto y presupuesto restante por equipo; nada más
-en el stack conoce esos conceptos.
+**Primary:** LiteLLM's `prometheus` callback, via ServiceMonitor. It's the only
+source of TTFT, tokens, spend and remaining budget per team; nothing else in the
+stack knows those concepts.
 
-**Red de seguridad:** LiteLLM también exporta trazas OTLP, y el collector tiene
-el conector `spanmetrics` activado, que deriva métricas RED con prefijo
-`nullnode_`. Si el callback no está disponible, hay tasa, errores y latencia sin
-tocar nada.
+**Safety net:** LiteLLM also exports OTLP traces, and the collector has the
+`spanmetrics` connector enabled, which derives RED metrics with prefix
+`nullnode_`. If the callback isn't available, you get rate, errors and latency
+without touching anything.
 
-El fallback **no** cubre TTFT, tokens ni presupuesto: eso solo lo sabe LiteLLM.
+The fallback does **not** cover TTFT, tokens or budget: only LiteLLM knows those.
 
-**Caché:** del exporter de Redis (`redis_keyspace_hits_total` / `misses`). Vale
-porque el gateway es el único cliente de esa instancia.
+**Cache:** from the Redis exporter (`redis_keyspace_hits_total` / `misses`).
+Works because the gateway is the only client of that instance.
 
-**VRAM:** del DCGM exporter, solo en perfil GPU. cAdvisor reporta RAM del host,
-que no dice nada sobre si un modelo cabe en la tarjeta.
+**VRAM:** from the DCGM exporter, only in GPU profile. cAdvisor reports host RAM,
+which says nothing about whether a model fits on the card.
 
-## Consecuencias
+## Consequences
 
-- Los dashboards llevan un panel con el comando para comprobar los nombres. Un
-  panel vacío no distingue "no hay tráfico" de "la métrica se renombró".
-- Las reglas de grabación son la única definición de cada señal
-  (`nullnode:ttft_seconds:p95`, etc.), así que una alerta no puede contradecir a
-  su gráfica.
-- El trigger de KEDA lleva la consulta alternativa en el values
+- Dashboards include a panel with the command to check names. An empty panel
+  doesn't distinguish "no traffic" from "the metric was renamed".
+- Recording rules are the only definition of each signal
+  (`nullnode:ttft_seconds:p95`, etc.), so an alert can't contradict its graph.
+- The KEDA trigger has the alternative query in the values
   (`autoscaling.prometheus.fallbackQuery`).
-- Actualizar LiteLLM obliga a verificar los nombres. Está en la checklist de
-  `GOTO.md`.
+- Updating LiteLLM requires verifying the names. It's in the `GOTO.md` checklist.

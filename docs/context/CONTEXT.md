@@ -14,7 +14,7 @@ First: real GitOps (one root `Application`, everything else reconciles), secrets
 
 Second: write down where the lab deviates and why. LocalStack Community doesn't persist, a GPU can't be shared between pods, secrets are in clear in Terraform state. It's in the ADRs, not hidden.
 
-From this a corollary: better absent and documented than present and non-functional. The previous version declared six complete phases over components that didn't exist; the record is in [AUDITORIA-PLANTILLA.md](AUDITORIA-PLANTILLA.md).
+From this a corollary: better absent and documented than present and non-functional. The previous version declared six complete phases over components that didn't exist; the record is in [TEMPLATE-AUDIT.md](TEMPLATE-AUDIT.md).
 
 ## Layers
 

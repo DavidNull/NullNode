@@ -1,27 +1,27 @@
 # Troubleshooting
 
-Problemas frecuentes ordenados por cuándo aparecen.
+Frequent problems ordered by when they appear.
 
 ---
 
-## Durante `make setup` / preflight
+## During `make setup` / preflight
 
-### "Docker not found" al ejecutar `make setup`
+### "Docker not found" when running `make setup`
 
-Docker es el único requisito previo que no se puede instalar desde el Makefile.
-Sigue la guía de instalación para tu sistema:
+Docker is the only prerequisite that can't be installed from the Makefile.
+Follow the installation guide for your system:
 <https://docs.docker.com/engine/install/>
 
-En WSL2, instala Docker Desktop en Windows y activa la integración con tu
-distro en Settings → Resources → WSL Integration.
+On WSL2, install Docker Desktop on Windows and enable integration with your
+distro in Settings → Resources → WSL Integration.
 
 ### "the GPU profile is selected but Docker cannot reach an NVIDIA GPU"
 
-El preflight te dice exactamente cuál de los tres pasos falta:
+The preflight tells you exactly which of the three steps is missing:
 
-1. **Driver NVIDIA** → instálalo en Windows (no en WSL). Reinicia.
+1. **NVIDIA driver** → install it on Windows (not WSL). Restart.
 
-2. **nvidia-container-toolkit** → dentro de la distro WSL:
+2. **nvidia-container-toolkit** → inside the WSL distro:
 
    ```bash
    curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | sudo gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg
@@ -33,9 +33,9 @@ El preflight te dice exactamente cuál de los tres pasos falta:
    sudo systemctl restart docker
    ```
 
-3. **Imagen CUDA de k3s** → `make k3s-cuda-image` (tarda unos minutos, solo una vez).
+3. **k3s CUDA image** → `make k3s-cuda-image` (takes a few minutes, only once).
 
-Si no tienes GPU, usa `PROFILE=cpu make up`.
+If you don't have a GPU, use `PROFILE=cpu make up`.
 
 ### "k3d X.Y.Z is too old"
 
@@ -45,90 +45,90 @@ curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | TAG=v5.7.
 
 ---
 
-## Durante `make up`
+## During `make up`
 
-### El clúster ya existe y `make up` falla al crearlo
+### Cluster already exists and `make up` fails creating it
 
 ```bash
 k3d cluster delete nullnode
 make up
 ```
 
-O si quieres conservar el estado: `make up --from cloud-mock` para saltarte la
-fase del clúster.
+Or if you want to preserve state: `make up --from cloud-mock` to skip the cluster
+phase.
 
-### LocalStack no arranca / `terraform apply` falla en cloud-mock
+### LocalStack doesn't start / `terraform apply` fails in cloud-mock
 
-LocalStack corre como contenedor Docker. Comprueba:
+LocalStack runs as a Docker container. Check:
 
 ```bash
 docker ps -a | grep localstack
 docker logs localstack
 ```
 
-Si el contenedor existe pero no responde:
+If the container exists but doesn't respond:
 
 ```bash
 docker rm -f localstack
 make up --from cloud-mock
 ```
 
-Si hay un error de puertos ocupados (`4566 already in use`):
+If there's a port conflict error (`4566 already in use`):
 
 ```bash
 lsof -i :4566
-# mata el proceso que lo ocupa, luego:
+# kill the process occupying it, then:
 make up --from cloud-mock
 ```
 
-### ArgoCD no sincroniza / aplicaciones en `Unknown` o `OutOfSync`
+### ArgoCD doesn't sync / applications in `Unknown` or `OutOfSync`
 
-ArgoCD reconcilia desde git, no desde tu copia local. Si acabas de hacer
-cambios, asegúrate de haberlos pusheado:
+ArgoCD reconciles from git, not from your local copy. If you just made changes,
+make sure you pushed them:
 
 ```bash
 git push
 make sync
 ```
 
-Si la revisión de gitops no coincide con la rama que estás trabajando:
+If the gitops revision doesn't match the branch you're working on:
 
 ```bash
 terraform -chdir=infra/terraform/platform-bootstrap apply \
-  -var gitops_target_revision=mi-rama
+  -var gitops_target_revision=my-branch
 ```
 
-### Pods en `Pending` (perfil GPU)
+### Pods in `Pending` (GPU profile)
 
-Casi siempre es que el device plugin de NVIDIA no está listo todavía o el pod
-pide la GPU antes de que el plugin la registre. Espera un minuto y comprueba:
+Almost always the NVIDIA device plugin isn't ready yet or the pod requests the
+GPU before the plugin registers it. Wait a minute and check:
 
 ```bash
 kubectl get pods -n nullnode-platform -o wide
-kubectl describe pod <pod-en-pending> -n nullnode-platform
+kubectl describe pod <pending-pod> -n nullnode-platform
 ```
 
-Si el evento dice `0/1 nodes have sufficient nvidia.com/gpu`, el device plugin
-aún no está listo:
+If the event says `0/1 nodes have sufficient nvidia.com/gpu`, the device plugin
+isn't ready yet:
 
 ```bash
 kubectl rollout status ds/nvidia-device-plugin-daemonset -n kube-system
 ```
 
-### Ollama tarda mucho en arrancar
+### Ollama takes a long time to start
 
-Normal en el primer arranque: está descargando los pesos del modelo. Con `make
-logs-ollama` puedes ver el progreso. Para llama3.2 (3B) espera entre 5 y 15
-minutos según tu conexión.
+Normal on first boot: it's downloading model weights. With `make logs-ollama`
+you can see progress. For llama3.2 (3B) expect 5-15 minutes depending on your
+connection.
 
 ---
 
-## Durante `make smoke`
+## During `make smoke`
 
-### "DNS resolution failed" para `gateway.nullnode.localhost`
+### "DNS resolution failed" for `gateway.nullnode.localhost`
 
-Las entradas de `/etc/hosts` no están añadidas. Ejecuta `make hosts` para ver
-la línea exacta y añádela:
+The `/etc/hosts` entries aren't added. Run `make hosts` to see the exact line
+and add it:
 
 ```bash
 make hosts
@@ -136,40 +136,39 @@ make hosts
 sudo tee -a /etc/hosts <<< "127.0.0.1 gateway.nullnode.localhost grafana.nullnode.localhost prometheus.nullnode.localhost argocd.nullnode.localhost"
 ```
 
-En Windows, si accedes desde el navegador, añade la misma línea a
-`C:\Windows\System32\drivers\etc\hosts` (como administrador).
+On Windows, if accessing from the browser, add the same line to
+`C:\Windows\System32\drivers\etc\hosts` (as administrator).
 
-### "401 Unauthorized" en el smoke test
+### "401 Unauthorized" in the smoke test
 
-La clave maestra no llegó al pod de LiteLLM. Comprueba que el secret existe:
+The master key didn't reach the LiteLLM pod. Check that the secret exists:
 
 ```bash
 kubectl get secret litellm-master-key -n nullnode-platform
 ```
 
-Si no existe, es que el `platform-bootstrap` de Terraform no terminó bien.
-Revisa el output: `terraform -chdir=infra/terraform/platform-bootstrap output`.
+If it doesn't exist, the Terraform `platform-bootstrap` didn't finish well.
+Check the output: `terraform -chdir=infra/terraform/platform-bootstrap output`.
 
-### "cache miss en todas las peticiones repetidas"
+### "cache miss on all repeated requests"
 
-Redis no está configurado como backend de caché en LiteLLM, o el pod de Redis
-no está Ready:
+Redis isn't configured as cache backend in LiteLLM, or the Redis pod isn't Ready:
 
 ```bash
 kubectl rollout status statefulset/redis -n nullnode-platform
 kubectl -n nullnode-platform logs deployment/litellm | grep -i cache
 ```
 
-### "no audit log en S3"
+### "no audit log in S3"
 
-El callback de S3 de LiteLLM no está llegando a LocalStack. Comprueba que
-LocalStack sigue vivo:
+LiteLLM's S3 callback isn't reaching LocalStack. Check that LocalStack is still
+alive:
 
 ```bash
 curl http://127.0.0.1:4566/_localstack/health
 ```
 
-Si LocalStack murió (pasa si Docker se reinicia):
+If LocalStack died (happens if Docker restarts):
 
 ```bash
 make up --from cloud-mock
@@ -179,10 +178,10 @@ make up --from cloud-mock
 
 ## CI / GitHub Actions
 
-### Todos los jobs de CI fallan con "Permission denied"
+### All CI jobs fail with "Permission denied"
 
-Los scripts en `scripts/` necesitan permiso de ejecución. Si clonas el repo y
-los permisos no se conservaron:
+Scripts in `scripts/` need execute permission. If you cloned the repo and
+permissions weren't preserved:
 
 ```bash
 chmod +x scripts/up.sh scripts/down.sh scripts/security.sh scripts/smoke.sh \
@@ -192,24 +191,24 @@ git commit -m "fix: restore execute permissions on scripts"
 git push
 ```
 
-### `markdownlint` falla con "conflict marker"
+### `markdownlint` fails with "conflict marker"
 
-Hay conflictos de merge sin resolver en algún `.md`. Búscalos:
+There are unresolved merge conflicts in some `.md`. Find them:
 
 ```bash
 grep -r "^<<<<<<< " docs/
 ```
 
-Resuélvelos manualmente y haz commit.
+Resolve them manually and commit.
 
-### El job de integración agota el timeout (45 min)
+### Integration job times out (45 min)
 
-El modelo no terminó de descargarse. En CI solo se usa el perfil CPU con un
-modelo de 1B, pero el runner puede estar saturado. Opciones:
+The model didn't finish downloading. In CI only the CPU profile is used with a
+1B model, but the runner might be saturated. Options:
 
-- Relanzar el job desde la UI de GitHub (Actions → Re-run failed jobs).
-- Si falla repetidamente, revisa que el modelo configurado para CPU sea
-  `llama3.2:1b` y no uno más grande.
+- Re-run the job from the GitHub UI (Actions → Re-run failed jobs).
+- If it fails repeatedly, check that the model configured for CPU is
+  `llama3.2:1b` and not a larger one.
 
 ---
 
@@ -217,8 +216,8 @@ modelo de 1B, pero el runner puede estar saturado. Opciones:
 
 ### "Error: No valid credential sources found"
 
-Terraform intenta conectarse a AWS real en lugar de a LocalStack. Asegúrate de
-que las variables de entorno mock están presentes:
+Terraform is trying to connect to real AWS instead of LocalStack. Make sure the
+mock environment variables are present:
 
 ```bash
 export AWS_ACCESS_KEY_ID=test
@@ -226,41 +225,41 @@ export AWS_SECRET_ACCESS_KEY=test
 export AWS_DEFAULT_REGION=eu-west-1
 ```
 
-El stack `cloud-mock` las inyecta automáticamente al arrancar desde `make up`,
-pero si ejecutas Terraform directamente tendrás que exportarlas.
+The `cloud-mock` stack injects them automatically when starting from `make up`,
+but if you run Terraform directly you'll need to export them.
 
-### "state lock" al relanzar `make up`
+### "state lock" when re-running `make up`
 
-Si un `apply` anterior se interrumpió puede quedar un lock. Con LocalStack como
-backend, borrarlo es sencillo:
+If a previous `apply` was interrupted, a lock might remain. With LocalStack as
+backend, deleting it is simple:
 
 ```bash
 terraform -chdir=infra/terraform/cloud-mock force-unlock <lock-id>
 ```
 
-El lock-id aparece en el mensaje de error.
+The lock-id appears in the error message.
 
 ---
 
-## Observabilidad
+## Observability
 
-### Paneles de Grafana vacíos
+### Empty Grafana panels
 
-Las métricas de LiteLLM dependen de la versión pinneada del chart
-([ADR-0006](../adr/0006-metrics-sources.md)). Si actualizaste LiteLLM, los
-nombres de las métricas pueden haber cambiado. Comprueba:
+LiteLLM metrics depend on the pinned chart version
+([ADR-0006](../adr/0006-metrics-sources.md)). If you updated LiteLLM, metric
+names might have changed. Check:
 
 ```bash
 curl -s http://gateway.nullnode.localhost:8080/metrics | grep litellm
 ```
 
-Y compara con las reglas de grabación en
+And compare with the recording rules in
 `k8s/charts/nullnode-observability/templates/`.
 
-### "No data" en el panel de VRAM (solo perfil GPU)
+### "No data" in the VRAM panel (GPU profile only)
 
-El exporter DCGM tarda en arrancar. Espera 2-3 minutos tras el primer boot del
-clúster. Si sigue sin aparecer:
+The DCGM exporter takes time to start. Wait 2-3 minutes after the first cluster
+boot. If it still doesn't appear:
 
 ```bash
 kubectl get pods -n kube-system | grep dcgm

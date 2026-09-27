@@ -1,101 +1,100 @@
 # Runbook
 
-Diagnóstico por síntoma. Cada alerta apunta aquí por su ancla.
+Diagnosis by symptom. Each alert points here by its anchor.
 
-Primer comando siempre: `make status` — endpoints, pods no sanos, Applications y
-ScaledObjects en una pantalla.
+First command always: `make status` — endpoints, unhealthy pods, Applications and
+ScaledObjects on one screen.
 
 ---
 
-## Arranque
+## Startup
 
-### El primer `make up` tarda mucho
+### First `make up` takes a long time
 
-Normal: ~1 GiB de imágenes de observabilidad más 2-5 GiB por modelo. 10-20
-minutos.
+Normal: ~1 GiB of observability images plus 2-5 GiB per model. 10-20 minutes.
 
-`^C` es seguro, ArgoCD sigue reconciliando. Retomar con `make status` o
+`^C` is safe, ArgoCD keeps reconciling. Resume with `make status` or
 `kubectl -n argocd get applications -w`.
 
-### `PROFILE=gpu` falla en el preflight
+### `PROFILE=gpu` fails in preflight
 
-El mensaje dice cuál de las tres comprobaciones falló:
+The message tells you which of the three checks failed:
 
-1. **Docker no ve la GPU.** Driver en el host (en Windows, no en WSL),
-   `nvidia-container-toolkit` dentro de la distro WSL, Docker reiniciado
-   después. Verificar:
+1. **Docker doesn't see the GPU.** Driver on the host (in Windows, not WSL),
+   `nvidia-container-toolkit` inside the WSL distro, Docker restarted after.
+   Verify:
    `docker run --rm --gpus all nvidia/cuda:12.6.2-base-ubuntu24.04 nvidia-smi`
-2. **Falta la imagen CUDA.** `make k3s-cuda-image`.
-3. Sin GPU: `PROFILE=cpu make up`.
+2. **Missing CUDA image.** `make k3s-cuda-image`.
+3. No GPU: `PROFILE=cpu make up`.
 
-### Las Applications quedan en `Unknown` o `ComparisonError`
+### Applications stuck in `Unknown` or `ComparisonError`
 
-Casi siempre ArgoCD no puede leer el repositorio. Reconcilia desde
-`gitops.repoURL` en la revisión configurada, no desde tu copia local: sin push,
-los cambios no existen para él.
+Almost always ArgoCD can't read the repository. It reconciles from
+`gitops.repoURL` at the configured revision, not from your local copy: without
+push, changes don't exist for it.
 
 ```bash
 kubectl -n argocd get application nullnode-root -o jsonpath='{.status.conditions}' | jq
 kubectl -n argocd logs deploy/argocd-repo-server --tail=100
 ```
 
-Para iterar sin pushear a `main`, apunta el bootstrap a tu rama:
+To iterate without pushing to `main`, point bootstrap to your branch:
 
 ```bash
 terraform -chdir=infra/terraform/platform-bootstrap apply \
-  -var gitops_target_revision=mi-rama
+  -var gitops_target_revision=my-branch
 ```
 
 ---
 
-## Alertas
+## Alerts
 
 ### NullNodeGatewayDown
 
-Por orden:
+In order:
 
 ```bash
 kubectl -n nullnode-platform get pods -l app.kubernetes.io/name=litellm
 kubectl -n nullnode-platform logs deploy/litellm --tail=200
 ```
 
-Causas habituales:
+Common causes:
 
-- **`CrashLoopBackOff` al arrancar:** migraciones de Prisma. Comprueba que
-  Postgres está `Ready` y que existe `nullnode-postgres-auth`. El initContainer
-  lo cubre, así que si llegas aquí Postgres arrancó y luego cayó.
-- **Config inválida:** un error de sintaxis mata el proceso al segundo.
+- **`CrashLoopBackOff` on startup:** Prisma migrations. Check that Postgres is
+  `Ready` and that `nullnode-postgres-auth` exists. The initContainer covers
+  this, so if you get here Postgres started and then crashed.
+- **Invalid config:** a syntax error kills the process in a second.
   `kubectl -n nullnode-platform get cm litellm-config -o yaml`.
-- **Falta el secreto:** `platform-bootstrap` no llegó a aplicar.
+- **Missing secret:** `platform-bootstrap` didn't finish applying.
   `./scripts/up.sh --only platform`.
 
 ### NullNodeGatewayHighErrorRate
 
-Separar por código: significan cosas opuestas.
+Separate by code: they mean opposite things.
 
 ```promql
 sum by (status_code) (rate(litellm_proxy_failed_requests_metric_total[5m]))
 ```
 
-- **429:** gobierno funcionando. Un equipo agotó presupuesto o su RPM/TPM.
-  Decisión de negocio: subir el límite en `departments` o dejar que module.
-- **401/403:** claves mal repartidas o revocadas.
-- **5xx:** el pool de inferencia. Ir a `NullNodeWorkerPoolEmpty`.
-- **408/504:** timeouts. Modelo grande para el hardware, o
-  `OLLAMA_NUM_PARALLEL` por encima de lo que aguanta la VRAM.
+- **429:** governance working. A team exhausted budget or their RPM/TPM.
+  Business decision: raise the limit in `departments` or let it throttle.
+- **401/403:** keys distributed wrong or revoked.
+- **5xx:** the inference pool. Go to `NullNodeWorkerPoolEmpty`.
+- **408/504:** timeouts. Model too big for the hardware, or
+  `OLLAMA_NUM_PARALLEL` above what VRAM can handle.
 
 ### NullNodeTimeToFirstTokenDegraded
 
-La única latencia que el usuario nota. Por orden de probabilidad:
+The only latency the user notices. In order of probability:
 
-1. **El modelo salió de VRAM.** `OLLAMA_KEEP_ALIVE` expiró y cada llamada
-   recarga. Subirlo en el values del perfil.
-2. **Más concurrencia que `OLLAMA_NUM_PARALLEL`.** Las peticiones se encolan
-   dentro de Ollama sin que suba nada en Kubernetes. Comparar rps del gateway
-   contra el valor configurado.
-3. **El pool escaló a la baja con tráfico.** Panel "KEDA scaling decisions".
-4. **Contención de VRAM** con `OLLAMA_MAX_LOADED_MODELS > 1`: dos modelos se
-   turnan y ambos van peor.
+1. **Model evicted from VRAM.** `OLLAMA_KEEP_ALIVE` expired and every call
+   reloads. Raise it in the profile values.
+2. **More concurrency than `OLLAMA_NUM_PARALLEL`.** Requests queue inside
+   Ollama without anything going up in Kubernetes. Compare gateway rps against
+   the configured value.
+3. **Pool scaled down with traffic.** "KEDA scaling decisions" panel.
+4. **VRAM contention** with `OLLAMA_MAX_LOADED_MODELS > 1`: two models take
+   turns and both perform worse.
 
 ```bash
 kubectl -n nullnode-platform logs statefulset/ollama --tail=100 | grep -i "load\|memory"
@@ -103,22 +102,22 @@ kubectl -n nullnode-platform logs statefulset/ollama --tail=100 | grep -i "load\
 
 ### NullNodeCacheHitRateLow
 
-Informativa. Tres causas, y la tercera es la que importa:
+Informational. Three causes, and the third is the one that matters:
 
-1. La carga es diversa. Nada que arreglar.
-2. `cache.ttlSeconds` corto para el patrón de uso.
-3. **Redis evicta bajo presión de `maxmemory`.** Subir el TTL no arregla nada.
-   Mirar evicciones primero:
+1. The load is diverse. Nothing to fix.
+2. `cache.ttlSeconds` too short for the usage pattern.
+3. **Redis evicts under `maxmemory` pressure.** Raising TTL doesn't fix it.
+   Check evictions first:
 
 ```promql
 rate(redis_evicted_keys_total[5m])
 ```
 
-Si hay evicciones, subir `config.maxmemory` antes de tocar el TTL.
+If there are evictions, raise `config.maxmemory` before touching TTL.
 
 ### NullNodeTeamBudgetNearlyExhausted
 
-A cero, el gateway devuelve 429 a las claves de ese equipo. Es lo diseñado.
+At zero, the gateway returns 429 to that team's keys. That's by design.
 
 ```bash
 KEY=$(make -s key)
@@ -126,7 +125,7 @@ curl -s http://gateway.nullnode.localhost:8080/team/list \
   -H "Authorization: Bearer $KEY" | jq '.[] | {team_alias, spend, max_budget}'
 ```
 
-Subir presupuesto sin redespliegue (los equipos viven en Postgres):
+Raise budget without redeploy (teams live in Postgres):
 
 ```bash
 curl -X POST http://gateway.nullnode.localhost:8080/team/update \
@@ -134,108 +133,109 @@ curl -X POST http://gateway.nullnode.localhost:8080/team/update \
   -d '{"team_id":"<id>","max_budget":500}'
 ```
 
-Para que el cambio sea permanente, editar `departments` en el values y commitear.
+To make the change permanent, edit `departments` in the values and commit.
 
 ### NullNodeWorkerPoolEmpty
 
-Hay tráfico y cero réplicas listas.
+There's traffic and zero ready replicas.
 
 ```bash
 kubectl -n nullnode-platform get pods -l app.kubernetes.io/name=ollama
 kubectl -n nullnode-platform describe pod ollama-0
 ```
 
-- **`Pending` / `Insufficient nvidia.com/gpu`:** la GPU está reclamada. Con
-  una tarjeta, `maxReplicas` tiene que ser 1 (ADR-0004). Si hay un pod viejo
-  terminando, esperar.
-- **`Pending` / `Insufficient memory`:** los requests no caben. Bajarlos o usar
-  un modelo menor.
-- **`Init:0/1` mucho tiempo:** descargando pesos.
+- **`Pending` / `Insufficient nvidia.com/gpu`:** the GPU is claimed. With one
+  card, `maxReplicas` has to be 1 (ADR-0004). If there's an old pod terminating,
+  wait.
+- **`Pending` / `Insufficient memory`:** requests don't fit. Lower them or use
+  a smaller model.
+- **`Init:0/1` for a long time:** downloading weights.
   `kubectl -n nullnode-platform logs ollama-0 -c preload-models -f`
-- **Cero réplicas y todo sano:** `scaleToZero` activo y el pool durmiendo.
+- **Zero replicas and everything healthy:** `scaleToZero` active and the pool
+  sleeping.
 
 ### NullNodeWorkerPoolCrashLooping
 
-Casi siempre OOM:
+Almost always OOM:
 
 ```bash
 kubectl -n nullnode-platform get pod ollama-0 \
   -o jsonpath='{.status.containerStatuses[0].lastState}' | jq
 ```
 
-`OOMKilled` significa límite por debajo del working set. Un 7B cuantizado
-necesita ~6 GiB de RAM del contenedor incluso en GPU (KV cache, tokenizer,
-buffers). Subir `resources.limits.memory` o bajar de modelo.
+`OOMKilled` means limit below the working set. A quantized 7B needs ~6 GiB of
+container RAM even on GPU (KV cache, tokenizer, buffers). Raise
+`resources.limits.memory` or drop to a smaller model.
 
 ### NullNodeGpuMemoryHigh
 
-La siguiente carga fallará o desalojará un modelo residente.
+The next load will fail or evict a resident model.
 
 ```bash
 kubectl -n nullnode-observability port-forward svc/dcgm-exporter 9400:9400
 curl -s localhost:9400/metrics | grep DCGM_FI_DEV_FB
 ```
 
-Bajar `OLLAMA_MAX_LOADED_MODELS` a 1 o usar cuantizaciones más agresivas
+Lower `OLLAMA_MAX_LOADED_MODELS` to 1 or use more aggressive quantizations
 (`:q4_0`).
 
 ---
 
-## Problemas que no tienen alerta
+## Problems without alerts
 
-### `curl` no resuelve `gateway.nullnode.localhost`
+### `curl` doesn't resolve `gateway.nullnode.localhost`
 
-glibc no resuelve `*.localhost` (los navegadores sí).
+glibc doesn't resolve `*.localhost` (browsers do).
 
 ```bash
-make hosts   # imprime la línea para /etc/hosts
+make hosts   # prints the line for /etc/hosts
 ```
 
-O saltárselo: `curl --resolve gateway.nullnode.localhost:8080:127.0.0.1 ...`
+Or skip it: `curl --resolve gateway.nullnode.localhost:8080:127.0.0.1 ...`
 
-### Las claves de departamento no aparecen
+### Department keys don't appear
 
-`make department-keys` lee el secreto de Secrets Manager que escribe el Job de
-bootstrap. Si sale vacío o `_bootstrap: pending`:
+`make department-keys` reads the Secrets Manager secret that the bootstrap job
+writes. If it comes back empty or `_bootstrap: pending`:
 
 ```bash
 kubectl -n nullnode-platform get jobs
 kubectl -n nullnode-platform logs job/<litellm-bootstrap-...>
 ```
 
-Es un hook PostSync: solo corre si la Application `litellm` sincroniza bien.
-Idempotente, y no regenera claves ya registradas.
+It's a PostSync hook: only runs if the `litellm` Application syncs properly.
+Idempotent, and doesn't regenerate already registered keys.
 
-### Un panel de Grafana está vacío
+### A Grafana panel is empty
 
-Distinguir "no hay tráfico" de "la métrica se renombró":
+Distinguish "no traffic" from "the metric was renamed":
 
 ```bash
 KEY=$(make -s key)
 curl -s http://gateway.nullnode.localhost:8080/metrics | grep '^litellm_' | cut -d'{' -f1 | sort -u
 ```
 
-Comparar con las expresiones del panel. Los nombres cambian entre versiones
-menores de LiteLLM: ADR-0006.
+Compare with the panel expressions. Names change between LiteLLM minor versions:
+ADR-0006.
 
-### ArgoCD marca Ollama o LiteLLM como `OutOfSync` para siempre
+### ArgoCD marks Ollama or LiteLLM as `OutOfSync` forever
 
-Debería estar cubierto: `argocd.tf` configura `ignoreDifferences` sobre
-`/spec/replicas`, porque KEDA y el HPA son dueños del campo. Si reaparece,
-comprobar que el ConfigMap las mantiene:
+Should be covered: `argocd.tf` configures `ignoreDifferences` on
+`/spec/replicas`, because KEDA and the HPA own the field. If it reappears,
+check that the ConfigMap maintains them:
 
 ```bash
 kubectl -n argocd get cm argocd-cm -o yaml | grep -A3 ignoreDifferences
 ```
 
-### Todo está raro después de reiniciar Docker
+### Everything is weird after restarting Docker
 
-LocalStack Community no persiste: al reiniciar, bucket y secretos desaparecen y
-los pods fallan las llamadas a S3.
+LocalStack Community doesn't persist: on restart, bucket and secrets disappear
+and pods fail S3 calls.
 
 ```bash
-./scripts/up.sh --only cloud-mock   # recrea bucket y secretos
+./scripts/up.sh --only cloud-mock   # recreates bucket and secrets
 ```
 
-Ojo: Terraform genera credenciales nuevas, así que las claves de departamento
-repartidas dejan de valer (ADR-0005).
+Watch out: Terraform generates new credentials, so the distributed department
+keys stop working (ADR-0005).
