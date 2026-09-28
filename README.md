@@ -138,11 +138,12 @@ ArgoCD keeps reconciling in the background.
 `make up` exposes an OpenAI-compatible endpoint. Connect from VS Code with
 Continue or Cline: [docs/usage/CONNECT.md](docs/usage/CONNECT.md).
 
-### 6. Pinned versions without network verification
+### 6. Pinned versions
 
-Third-party charts are pinned blindly: run `make versions-check` before the
-first deployment. LiteLLM metrics depend on the pinned version and affect
-dashboards and the KEDA trigger ([ADR-0006](docs/adr/0006-metrics-sources.md)).
+Third-party charts are pinned to specific versions. Run `make versions-check`
+before the first deployment to verify they exist. LiteLLM metrics depend on the
+pinned version and affect dashboards and the KEDA trigger
+([ADR-0006](docs/adr/0006-metrics-sources.md)).
 
 ---
 
@@ -174,7 +175,7 @@ Also `make`, a fresh WSL2 install doesn't have it🤓:
 
 ## Recent Versions
 
-**v0.5.2** - English documentation + updated architecture svg
+**v0.5.2** - Docs in English + updated architecture SVG
 **v0.5.1** - Tempo UI + better security
 **v0.5.0** - Complete observability with Tempo
 **v0.4.0** - NetworkPolicies + Reloader + Presidio
