@@ -1,43 +1,43 @@
-# 0003 - Un único punto de entrada por Ingress
+# 0003 - Single entry point via Ingress
 
-**Estado:** aceptada · **Fecha:** 2026-08-26
+**Status:** accepted · **Date:** 2026-08-26
 
-## Contexto
+## Context
 
-La plantilla mapeaba un puerto del host por servicio (4000, 3000, 8080, 9090)
-con Services `LoadBalancer`. Tres problemas: cada servicio nuevo obliga a
-recrear el clúster, los puertos chocan con lo que ya tengas corriendo, y no se
-parece a producción.
+The template mapped a host port per service (4000, 3000, 8080, 9090) with
+`LoadBalancer` Services. Three problems: every new service requires recreating
+the cluster, ports clash with whatever you're already running, and it doesn't
+look like production.
 
-Encima, un parche de kustomize añadía el puerto 4000 al Service de
-`argocd-server`, apuntando el gateway al sitio equivocado.
+On top of that, a kustomize patch added port 4000 to the `argocd-server` Service,
+pointing the gateway to the wrong place.
 
-## Decisión
+## Decision
 
-k3d publica solo 8080→80 y 8443→443 en el loadbalancer. Traefik (que ya viene
-con k3s) enruta por host:
+k3d only publishes 8080→80 and 8443→443 on the loadbalancer. Traefik (which comes
+with k3s) routes by host:
 
-| Host | Componente |
+| Host | Component |
 | --- | --- |
 | `gateway.nullnode.localhost` | LiteLLM |
 | `grafana.nullnode.localhost` | Grafana |
 | `prometheus.nullnode.localhost` | Prometheus |
 | `argocd.nullnode.localhost` | ArgoCD |
 
-Todos los Services internos son `ClusterIP`.
+All internal Services are `ClusterIP`.
 
-## Consecuencias
+## Consequences
 
-### A favor
+### Pros
 
-- Añadir un componente es añadir un Ingress, sin tocar el clúster.
-- Dos puertos del host en lugar de cinco.
-- El mismo Ingress vale contra un clúster real cambiando el sufijo DNS.
+- Adding a component is adding an Ingress, no need to touch the cluster.
+- Two host ports instead of five.
+- The same Ingress works against a real cluster by changing the DNS suffix.
 
-### En contra
+### Cons
 
-- Hay que resolver `*.nullnode.localhost`. Los navegadores lo hacen solos,
-  `curl` con glibc no siempre: `make hosts` imprime la línea de `/etc/hosts`.
-- Alternativa sin tocar `/etc/hosts`: `global.hostSuffix: 127.0.0.1.nip.io`,
-  que resuelve por DNS público. No es el defecto porque en redes corporativas
-  suele estar bloqueado.
+- You need to resolve `*.nullnode.localhost`. Browsers do it on their own,
+  `curl` with glibc doesn't always: `make hosts` prints the `/etc/hosts` line.
+- Alternative without touching `/etc/hosts`: `global.hostSuffix: 127.0.0.1.nip.io`,
+  which resolves via public DNS. Not the default because it's usually blocked in
+  corporate networks.

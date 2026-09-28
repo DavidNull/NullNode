@@ -1,120 +1,121 @@
-# Plan de acción
+# Action plan
 
-## Ahora: validar
+## Now: validate
 
-Nada de esto se ha ejecutado. Orden de comprobación:
+None of this has been executed. Check order:
 
-- [ ] `make versions-check` — las versiones de charts de terceros están pinneadas
-      sin acceso a red. Si alguna no resuelve, corregir `k8s/platform/values.yaml`
-      y `infra/terraform/platform-bootstrap/variables.tf`.
-- [ ] `make validate` — helm lint y render en ambos perfiles, terraform validate,
-      shellcheck, yamllint. Es lo mismo que corre CI.
-- [ ] Pushear a `main` (o apuntar el bootstrap a una rama con
-      `-var gitops_target_revision=...`). ArgoCD reconcilia desde git, no desde
-      el working tree.
-- [ ] `PROFILE=cpu make up` primero: descarta la GPU del diagnóstico y tarda
-      menos.
+- [ ] `make versions-check` — third-party chart versions are pinned without
+      network access. If any doesn't resolve, fix `k8s/platform/values.yaml` and
+      `infra/terraform/platform-bootstrap/variables.tf`.
+- [ ] `make validate` — helm lint and render on both profiles, terraform validate,
+      shellcheck, yamllint. Same as what CI runs.
+- [ ] Push to `main` (or point bootstrap to a branch with
+      `-var gitops_target_revision=...`). ArgoCD reconciles from git, not from
+      the working tree.
+- [ ] `PROFILE=cpu make up` first: rules out GPU from diagnosis and takes less
+      time.
 - [ ] `make smoke`.
-- [ ] `PROFILE=gpu make up` una vez el perfil CPU converja.
-- [ ] Verificar los nombres de las métricas de LiteLLM contra la versión
-      pinneada (ADR-0006). Afecta a los tres dashboards, a las reglas de
-      grabación y al trigger de KEDA. Comando en `../ops/VERSIONS.md`.
+- [ ] `PROFILE=gpu make up` once the CPU profile converges.
+- [ ] Verify LiteLLM metric names against the pinned version (ADR-0006). Affects
+      the three dashboards, recording rules and KEDA trigger. Command in
+      `../ops/VERSIONS.md`.
 
-## Siguiente: cerrar lo que está a medias
+## Next: close what's half-done
 
-- [ ] **Fijar las versiones de los escáneres en CI.** `trivy`, `shellcheck` y
-      `checkov` se instalan como *latest* (apt/pip) en los workflows. Cada release
-      nueva puede meter reglas que ponen el gate en rojo sin tocar una línea de
-      código — ya pasó con KSV-0014/0109, DS-0002 y AWS-0132 al subir Trivy.
-      Pinnearlos (como ya se hace con las imágenes) hace el pipeline determinista.
-- [ ] **Confirmar el test de integración en CI.** El blocker estaba en el mock:
-      LocalStack 3.8.1 colgaba `aws_s3_bucket_lifecycle_configuration` contra el
-      provider AWS 5.100. Subido a 4.4.0 (ver VERSIONS.md), el `apply` pasa en
-      local. Falta verlo verde en CI tras el push — recordar que ArgoCD reconcilia
-      desde el SHA pusheado, no desde el working tree.
-- [x] **Backend de trazas.** El collector recibe OTLP y deriva spanmetrics, pero
-      las trazas mueren en el exporter `debug`. Añadido Tempo y su datasource en
-      Grafana para poder abrir una petición lenta y ver dónde se fue el tiempo como
-      parte de v0.5.0.
-- [x] **Guardrail de PII por defecto.** Presidio está cableado y apagado por
-      RAM. Habilitado en perfil GPU como parte de v0.4.0. Se debe medir el impacto
-      en latencia y memoria tras el despliegue para confirmar que es asumible.
-- [x] **NetworkPolicies.** Escritas y desactivadas. Encendidas progresivamente
-      en Redis, Postgres, LiteLLM y Ollama como parte de v0.4.0. Verificadas con
-      helm lint y template validation.
-- [ ] **Escalado a cero.** Implementado y apagado. Medir cuánto tarda el pool en
-      despertar y si `num_retries` basta para no perder la primera petición.
-- [ ] **Presupuestos por usuario además de por equipo.** LiteLLM lo soporta;
-      ahora mismo solo hay equipos por departamento.
-- [x] **Open WebUI como componente opcional.** Antes se documentaba como
-      `docker run` (cliente, no infraestructura). Ahora está en el app-of-apps con
-      `enabled: false` por defecto. Al habilitarlo se despliega chat con Ingress
-      y clave de departamento inyectada desde el Secret, sin pasos manuales.
-- [ ] **Escaneo de las imágenes grandes en el gate.** LiteLLM y Ollama están
-      fuera porque sus CVEs vienen de las capas base de CUDA y Python. Con una
-      allowlist por capa base sí serían accionables.
+- [ ] **Pin scanner versions in CI.** `trivy`, `shellcheck` and `checkov` are
+      installed as *latest* (apt/pip) in the workflows. Every new release can
+      introduce rules that put the gate in red without touching a line of code —
+      already happened with KSV-0014/0109, DS-0002 and AWS-0132 when Trivy was
+      upgraded. Pinning them (as already done with images) makes the pipeline
+      deterministic.
+- [ ] **Confirm the integration test in CI.** The blocker was the mock:
+      LocalStack 3.8.1 hung on `aws_s3_bucket_lifecycle_configuration` against
+      the AWS 5.100 provider. Upgraded to 4.4.0 (see VERSIONS.md), the `apply`
+      passes locally. Still need to see it green in CI after the push — remember
+      that ArgoCD reconciles from the pushed SHA, not from the working tree.
+- [x] **Trace backend.** The collector receives OTLP and derives spanmetrics,
+      but traces die in the `debug` exporter. Added Tempo and its datasource in
+      Grafana to open a slow request and see where the time went as part of
+      v0.5.0.
+- [x] **PII guardrail by default.** Presidio is wired and disabled by RAM.
+      Enabled in GPU profile as part of v0.4.0. Need to measure latency and
+      memory impact after deployment to confirm it's acceptable.
+- [x] **NetworkPolicies.** Written and disabled. Enabled progressively on Redis,
+      Postgres, LiteLLM and Ollama as part of v0.4.0. Verified with helm lint and
+      template validation.
+- [ ] **Scale-to-zero.** Implemented and disabled. Measure how long the pool takes
+      to wake up and whether `num_retries` is enough to not lose the first request.
+- [ ] **Per-user budgets in addition to per-team.** LiteLLM supports it; right now
+      there are only department teams.
+- [x] **Open WebUI as optional component.** Previously documented as `docker run`
+      (client, not infrastructure). Now in the app-of-apps with `enabled: false`
+      by default. When enabled, chat deploys with Ingress and department key
+      injected from the Secret, no manual steps.
+- [ ] **Scanning large images at the gate.** LiteLLM and Ollama are excluded because
+      their CVEs come from CUDA and Python base layers. With an allowlist by base
+      layer they'd be actionable.
 
-## Después: lo que hace falta para que se parezca a producción
+## After: what's needed to look like production
 
-- [x] **External Secrets Operator** en lugar del data source. Instalado en la
-      wave -20 con un `ClusterSecretStore` contra el mismo Secrets Manager y un
-      `ExternalSecret` por credencial; Terraform ya no proyecta Secrets. Rotar es
-      cambiar el valor en el origen y esperar al `refreshInterval`, sin
-      `terraform apply` ([ADR-0007](../adr/0007-external-secrets-operator.md)).
-      Falta el eslabón final: un Reloader que reinicie los pods al cambiar el
-      Secret, porque `secretKeyRef` por env no se recarga en caliente.
-- [ ] **Un modelo hosted en el catálogo.** Con todo local el gasto es cero y el
-      dashboard de FinOps es un ensayo. Un proveedor de pago detrás de una
-      variable convierte los presupuestos en un control real.
-- [ ] **Fallbacks de modelo.** `router_settings` soporta cadenas de fallback. Con
-      un solo modelo por perfil no hay nada que probar.
-- [ ] **Etcd encryption at rest** y firma de imágenes. Ahora los Secrets de
-      Kubernetes son base64 sin más.
-- [ ] **Evaluación continua.** Un job periódico con un set de prompts de
-      referencia que publique métricas de calidad, para detectar que un cambio
-      de modelo o cuantización empeoró las respuestas.
-- [ ] **Versionado de prompts en el bucket.** El prefijo `prompts/` existe y el
-      versioning del bucket está activado, pero nada escribe ahí todavía.
-- [ ] **Multi-tenant real.** Un namespace por departamento con cuotas de
-      recursos, no solo cuotas lógicas en el gateway.
+- [x] **External Secrets Operator** instead of the data source. Installed in wave
+      -20 with a `ClusterSecretStore` against the same Secrets Manager and one
+      `ExternalSecret` per credential; Terraform no longer projects Secrets.
+      Rotating is changing the value at the source and waiting for the
+      `refreshInterval`, no `terraform apply` needed
+      ([ADR-0007](../adr/0007-external-secrets-operator.md)).
+      Missing the final link: a Reloader that restarts pods when the Secret
+      changes, because `secretKeyRef` via env doesn't reload hot.
+- [ ] **A hosted model in the catalog.** With everything local spend is zero and
+      the FinOps dashboard is a rehearsal. A paid provider behind a variable
+      turns budgets into real control.
+- [ ] **Model fallbacks.** `router_settings` supports fallback chains. With a
+      single model per profile there's nothing to test.
+- [ ] **Etcd encryption at rest** and image signing. Right now Kubernetes Secrets
+      are just base64.
+- [ ] **Continuous evaluation.** A periodic job with a set of reference prompts
+      that publishes quality metrics, to detect that a model change or
+      quantization made responses worse.
+- [ ] **Prompt versioning in the bucket.** The `prompts/` prefix exists and bucket
+      versioning is enabled, but nothing writes there yet.
+- [ ] **Real multi-tenant.** One namespace per department with resource quotas,
+      not just logical quotas in the gateway.
 
-## Ideas sin compromiso
+## Ideas without commitment
 
-- Interfaz de administración propia. LiteLLM ya trae UI; una capa con la vista
-  de FinOps por departamento tendría sentido si esto se usa en equipo.
-- `vLLM` como alternativa a Ollama para medir throughput con batching continuo.
-- Caché semántica por embeddings en lugar de exacta. LiteLLM lo soporta y
-  subiría el hit rate con prompts parafraseados.
-- Chaos testing: matar el pool bajo carga y comprobar que el gateway degrada en
-  lugar de colgarse.
+- Custom admin interface. LiteLLM already has a UI; a layer with the FinOps view
+  by department would make sense if this is used by a team.
+- `vLLM` as an alternative to Ollama to measure throughput with continuous batching.
+- Semantic cache by embeddings instead of exact. LiteLLM supports it and would
+  increase hit rate with paraphrased prompts.
+- Chaos testing: kill the pool under load and verify that the gateway degrades
+  instead of hanging.
 
 ---
 
-## Fases completadas
+## Completed phases
 
-Todas se rehicieron el 2026-08-26 sobre la base auditada. El detalle está en
-[AVANCES.md](AVANCES.md) y las razones de cada cambio en
-[las ADRs](../adr/).
+All were redone on 2026-08-26 on the audited base. Details in
+[PROGRESS.md](PROGRESS.md) and reasons for each change in
+[the ADRs](../adr/).
 
-- [x] **Fase 1 — Infraestructura e IaC.** Clúster declarativo con k3d en dos
-      perfiles, imagen CUDA de k3s, dos stacks de Terraform, scripts de ciclo de
-      vida idempotentes con fases.
-- [x] **Fase 2 — GitOps.** ArgoCD por Helm desde Terraform, un `AppProject` y un
-      `Application` raíz, app-of-apps con sync waves y patrón multi-source
-      `$values` para los charts de terceros.
-- [x] **Fase 3 — Gateway y caché.** LiteLLM con claves virtuales, presupuestos y
-      límites por departamento, caché en Redis, router con estado compartido.
-      Charts de Redis y PostgreSQL, que antes no existían.
-- [x] **Fase 4 — Pool de inferencia y autoescalado.** Ollama como StatefulSet con
-      volumen por réplica y precarga de modelos, KEDA (operador incluido) sobre
-      métrica de Prometheus.
-- [x] **Fase 5 — Observabilidad.** kube-prometheus-stack, OTel Collector con
-      spanmetrics, DCGM en perfil GPU, tres dashboards contra métricas reales,
-      reglas de grabación y ocho alertas con runbook.
-- [x] **Fase 6 — Cloud mockeado.** LocalStack fuera del clúster, S3 con
-      auditoría de peticiones y ciclo de vida, Secrets Manager como fuente única
-      de credenciales.
-- [x] **Fase 7 — Seguridad, guardrails y tooling.** Flujo de secretos sin nada en
-      git, `securityContext` restringido, Presidio cableado, NetworkPolicies
-      escritas, suite de validación offline, smoke test end-to-end, perfil de
-      carga k6, CI completo, runbook y ADRs.
+- [x] **Phase 1 — Infrastructure and IaC.** Declarative cluster with k3d in two
+      profiles, CUDA k3s image, two Terraform stacks, idempotent lifecycle scripts
+      with phases.
+- [x] **Phase 2 — GitOps.** ArgoCD via Helm from Terraform, one `AppProject` and one
+      root `Application`, app-of-apps with sync waves and multi-source pattern
+      `$values` for third-party charts.
+- [x] **Phase 3 — Gateway and cache.** LiteLLM with virtual keys, budgets and
+      limits per department, Redis cache, router with shared state. Redis and
+      PostgreSQL charts, which didn't exist before.
+- [x] **Phase 4 — Inference pool and autoscaling.** Ollama as StatefulSet with
+      per-replica volume and model preloading, KEDA (operator included) on
+      Prometheus metric.
+- [x] **Phase 5 — Observability.** kube-prometheus-stack, OTel Collector with
+      spanmetrics, DCGM in GPU profile, three dashboards against real metrics,
+      recording rules and eight alerts with runbook.
+- [x] **Phase 6 — Mocked cloud.** LocalStack outside the cluster, S3 with request
+      auditing and lifecycle, Secrets Manager as single credential source.
+- [x] **Phase 7 — Security, guardrails and tooling.** Secrets flow with nothing in
+      git, restricted `securityContext`, Presidio wired, NetworkPolicies written,
+      offline validation suite, end-to-end smoke test, k6 load profile, full CI,
+      runbook and ADRs.

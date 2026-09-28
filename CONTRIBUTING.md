@@ -1,77 +1,77 @@
 # Contributing to NullNode
 
-¡Gracias por tu interés en contribuir a NullNode! Este proyecto es un laboratorio personal de LLMOps, pero las contribuciones son bienvenidas.
+Thanks for your interest in contributing to NullNode! This project is a personal LLMOps lab, but contributions are welcome.
 
-## Cómo Contribuir
+## How to Contribute
 
-### Reportar Bugs
+### Report Bugs
 
-Antes de reportar un bug, busca si ya existe un issue similar. Si no, crea un nuevo issue con:
+Before reporting a bug, search if a similar issue already exists. If not, create a new issue with:
 
-- **Título:** Descripción breve del problema
-- **Descripción:** Detalles del comportamiento esperado vs actual
-- **Pasos para reproducir:** Pasos específicos para recrear el problema
-- **Entorno:** Sistema operativo, versiones de Docker/k3d/Helm/Terraform
-- **Logs:** Salida relevante de `make status`, `make smoke`, o logs específicos
+- **Title:** Brief description of the problem
+- **Description:** Details of expected vs actual behavior
+- **Steps to reproduce:** Specific steps to recreate the problem
+- **Environment:** OS, Docker/k3d/Helm/Terraform versions
+- **Logs:** Relevant output from `make status`, `make smoke`, or specific logs
 
-### Sugerir Mejoras
+### Suggest Improvements
 
-Para sugerencias de nuevas características o mejoras:
+For new features or improvements:
 
-- **Título:** Descripción breve de la mejora
-- **Descripción:** Explica la mejora y por qué sería útil
-- **Alternativas:** Menciona soluciones alternativas que has considerado
-- **Impacto:** Cómo afectaría a la arquitectura existente
+- **Title:** Brief description of the improvement
+- **Description:** Explain the improvement and why it would be useful
+- **Alternatives:** Mention alternative solutions you've considered
+- **Impact:** How it would affect the existing architecture
 
 ### Pull Requests
 
-1. **Fork** el repositorio
-2. Crea una **rama** para tu feature/fix (`feature/tu-nombre`)
-3. **Commitea** tus cambios con mensajes claros
-4. **Push** a tu rama
-5. Crea un **Pull Request** describiendo tus cambios
+1. **Fork** the repository
+2. Create a **branch** for your feature/fix (`feature/your-name`)
+3. **Commit** your changes with clear messages
+4. **Push** to your branch
+5. Create a **Pull Request** describing your changes
 
-### Estándar de Código
+### Code Standards
 
-- Sigue los patrones existentes en el proyecto
-- Usa **Helm** para cambios en k8s
-- Usa **Terraform** para cambios en infraestructura
-- **Valida** tus cambios con `make validate` antes de commitear
-- **Documenta** cambios relevantes en README o docs/
+- Follow existing patterns in the project
+- Use **Helm** for k8s changes
+- Use **Terraform** for infrastructure changes
+- **Validate** your changes with `make validate` before committing
+- **Document** relevant changes in README or docs/
 
 ### Testing
 
-Antes de enviar un PR:
+Before sending a PR:
 
 ```bash
-make validate    # Validación de helm, terraform, scripts
-make smoke      # Test end-to-end si tienes el clúster corriendo
+make validate    # helm, terraform, scripts validation
+make smoke      # end-to-end test if you have the cluster running
 ```
 
-## Proceso de Revisión
+## Review Process
 
-Las PRs se revisarán con atención a:
+PRs will be reviewed with attention to:
 
-- **Funcionalidad:** ¿El cambio funciona como esperado?
-- **Arquitectura:** ¿Se alinea con los patrones existentes?
-- **Documentación:** ¿Está documentado apropiadamente?
-- **Testing:** ¿Incluye validación?
+- **Functionality:** Does the change work as expected?
+- **Architecture:** Does it align with existing patterns?
+- **Documentation:** Is it appropriately documented?
+- **Testing:** Does it include validation?
 
-## Estilo de Comunicación
+## Communication Style
 
-- Sé respetuoso y constructivo
-- Acepta feedback de manera positiva
-- Explica tus razonamientos claramente
-- Pregunta si algo no está claro
+- Be respectful and constructive
+- Accept feedback positively
+- Explain your reasoning clearly
+- Ask if something isn't clear
 
-## Licencia
+## License
 
-Al contribuir, aceptas que tus contribuciones se publicen bajo la misma licencia que el proyecto.
+By contributing, you agree that your contributions are published under the same license as the project.
 
-## Contacto
+## Contact
 
-Para preguntas generales, abre un issue con la etiqueta `question`.
+For general questions, open an issue with the `question` label.
 
 ---
 
-**Nota:** Este es un proyecto personal de aprendizaje. Las contribuciones se manejan en el tiempo libre, así que ten paciencia con las revisiones.
+**Note:** This is a personal learning project. Contributions are handled in free time, so please be patient with reviews.

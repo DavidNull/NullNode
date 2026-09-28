@@ -1,44 +1,33 @@
-# 0002 - LocalStack corre fuera del clúster
+# 0002 - LocalStack runs outside the cluster
 
-**Estado:** aceptada · **Fecha:** 2026-08-26
+**Status:** accepted · **Date:** 2026-08-26
 
-## Contexto
+## Context
 
-La plantilla desplegaba LocalStack como chart gestionado por ArgoCD, y a la vez
-Terraform creaba el bucket y el secreto contra `http://localhost:4566`. Eso es
-un interbloqueo:
+The template deployed LocalStack as a chart managed by ArgoCD, and at the same time Terraform created the bucket and secret against `http://localhost:4566`. That's a deadlock:
 
-1. Terraform necesita LocalStack para crear el secreto.
-2. El secreto lo consume LiteLLM, que lo despliega ArgoCD.
-3. ArgoCD es lo que despliega LocalStack.
+1. Terraform needs LocalStack to create the secret.
+2. The secret is consumed by LiteLLM, which ArgoCD deploys.
+3. ArgoCD is what deploys LocalStack.
 
-Además el chart publicaba el endpoint con un `NodePort: 4566`, fuera del rango
-válido de NodePort (30000-32767), así que nunca habría respondido en el puerto
-que Terraform buscaba.
+Also the chart published the endpoint with a `NodePort: 4566`, outside the valid NodePort range (30000-32767), so it would never respond on the port Terraform was looking for.
 
-## Decisión
+## Decision
 
-LocalStack es un contenedor Docker en el host, gestionado por Terraform con el
-provider `kreuzwerker/docker`, publicado en el puerto 4566. Los pods lo
-alcanzan por `http://host.k3d.internal:4566`, el nombre DNS que k3d inyecta en
-CoreDNS.
+LocalStack is a Docker container on the host, managed by Terraform with the `kreuzwerker/docker` provider, published on port 4566. Pods reach it via `http://host.k3d.internal:4566`, the DNS name k3d injects in CoreDNS.
 
-El chart `k8s/platform/localstack/` se ha eliminado.
+The `k8s/platform/localstack/` chart has been removed.
 
-## Consecuencias
+## Consequences
 
-### A favor
+### Pros
 
-- Se rompe el ciclo: LocalStack → recursos AWS → clúster → plataforma.
-- Los charts se configuran igual que contra AWS de verdad; solo cambia el
-  endpoint.
-- Sobrevive a `k3d cluster delete`.
+- Breaks the cycle: LocalStack → AWS resources → cluster → platform.
+- Charts are configured the same as against real AWS; only the endpoint changes.
+- Survives `k3d cluster delete`.
 
-### En contra
+### Cons
 
-- Una pieza fuera de GitOps. Compromiso consciente: es la que *simula el
-  proveedor*, no parte de la plataforma.
-- El puerto queda expuesto en todas las interfaces, porque los pods lo alcanzan
-  por la IP del host en el bridge de Docker.
-- LocalStack Community no persiste estado: si el contenedor se reinicia, bucket
-  y secretos desaparecen. `make up` los recrea.
+- One piece outside GitOps. Conscious compromise: it's the piece that *simulates* the provider, not part of the platform.
+- The port is exposed on all interfaces because pods reach it via the host IP on Docker's bridge.
+- LocalStack Community doesn't persist state: if the container restarts, bucket and secrets disappear. `make up` recreates them.
