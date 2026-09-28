@@ -46,7 +46,6 @@ spec:
           command: ["/bin/sh", "-c"]
           args:
             - |
-              set -eu
               ollama serve &
               server_pid=$!
               ready=0
@@ -60,7 +59,9 @@ spec:
               fi
               {{- range .Values.models }}
               echo "==> pulling {{ . }}"
-              ollama pull {{ . | quote }}
+              if ! ollama pull {{ . | quote }}; then
+                echo "warning: failed to pull {{ . }} - will be pulled on first request" >&2
+              fi
               {{- end }}
               kill "$server_pid" 2>/dev/null || true
               wait "$server_pid" 2>/dev/null || true

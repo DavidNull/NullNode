@@ -30,7 +30,7 @@ Local and private enterprise LLMOps platform on K3s. Implements local LLM infere
 Cost: 0€ (just electricity). Everything runs on your hardware and AWS services are mocked.
 
 ```bash
-make up          # GPU profile (default)
+make up          # GPU profile (default) - takes 10-20 minutes on first run
 PROFILE=cpu make up
 make status
 make smoke
@@ -51,32 +51,10 @@ Everything mocked: AWS, S3, Bedrock, etc.
 ## Architecture
 
 <p align="center">
-  <img src="docs/media/nullnode-architecture.svg" alt="NullNode architecture diagram" width="90%">
+  <img src="docs/media/nullnode-architecture.png" alt="NullNode architecture diagram" width="90%">
 </p>
 
-The diagram shows the full stack: Ingress (Traefik), Control & Governance (LiteLLM, PostgreSQL, Redis), Execution (Ollama, Presidio), Observability (Prometheus, Grafana, Tempo, OTel), Secrets (External Secrets Operator, Reloader), GitOps (ArgoCD), Mock Cloud (LocalStack), and Infrastructure (Terraform, k3d).
-
-### Ingress Layer
-
-- **Traefik**: Single entry point, routes by host
-
-### Control & Governance Layer
-
-- **LiteLLM**: Gateway with keys, budgets, cache
-- **PostgreSQL**: Teams, keys, budgets
-- **Redis**: Prompt cache
-
-### Execution Layer
-
-- **Ollama**: Inference with model cache
-- **Presidio**: PII masking (GPU)
-
-### Observability Layer
-
-- **Prometheus + Grafana**: Metrics and dashboards
-- **Tempo**: Distributed tracing
-- **OTel Collector**: Trace processing
-- **DCGM Exporter**: VRAM metrics (GPU)
+**Request flow**: Client → Traefik → LiteLLM (validates key + budget, checks cache) → Ollama (inference) → back through LiteLLM → updates Postgres, sends metrics/traces/audit.
 
 ### Secrets Layer
 
