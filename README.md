@@ -1,6 +1,6 @@
-# NullNode <img src="docs/media/nullnode.png" alt="NullNode Logo" width="70" style="vertical-align: middle; margin-left: 10px;">
-
-**Everything a real platform has, but on your own hardware.**
+<p align="center">
+  <img src="docs/media/nullnode-banner.png" alt="NullNode Banner" width="100%">
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/K3s-Kubernetes-FFC61C?style=flat-square&logo=k3s&logoColor=white" alt="K3s">
@@ -46,12 +46,10 @@ Everything mocked: AWS, S3, Bedrock, etc.
   <img src="docs/media/mockeado.png" alt="AWS services mocked in NullNode" width="80%">
 </p>
 
----
-
 ## Architecture
 
 <p align="center">
-  <img src="docs/media/nullnode-architecture.png" alt="NullNode architecture diagram" width="90%">
+  <img src="docs/media/nullnode_arch_final.png" alt="NullNode architecture diagram" width="90%">
 </p>
 
 **Request flow**: Client → Traefik → LiteLLM (validates key + budget, checks cache) → Ollama (inference) → back through LiteLLM → updates Postgres, sends metrics/traces/audit.
