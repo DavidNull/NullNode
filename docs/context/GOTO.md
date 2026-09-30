@@ -47,10 +47,18 @@ None of this has been executed. Check order:
       to wake up and whether `num_retries` is enough to not lose the first request.
 - [ ] **Per-user budgets in addition to per-team.** LiteLLM supports it; right now
       there are only department teams.
-- [x] **Open WebUI as optional component.** Previously documented as `docker run`
-      (client, not infrastructure). Now in the app-of-apps with `enabled: false`
-      by default. When enabled, chat deploys with Ingress and department key
-      injected from the Secret, no manual steps.
+- [x] **Open WebUI as a platform component.** Previously documented as
+      `docker run` (client, not infrastructure). Now in the app-of-apps, on by
+      default in the GPU profile and off in CPU. Ingress, key and session key
+      come from the Secret; state sits on its own PVC. Raising `replicaCount`
+      still needs a shared `DATABASE_URL` first — see below.
+- [ ] **Tempo query UI behind an Ingress.** The v0.5.1 notes announced one at
+      `tempo.nullnode.localhost`; it was never written. Traces are reachable
+      today only through the Grafana datasource. Same for the Tempo and Reloader
+      NetworkPolicies those notes claimed.
+- [ ] **Open WebUI beyond one replica.** Its state is a SQLite file on a
+      ReadWriteOnce volume, so the chart is pinned to one replica. Pointing
+      `DATABASE_URL` at the existing Postgres would lift that.
 - [ ] **Scanning large images at the gate.** LiteLLM and Ollama are excluded because
       their CVEs come from CUDA and Python base layers. With an allowlist by base
       layer they'd be actionable.
@@ -62,9 +70,9 @@ None of this has been executed. Check order:
       `ExternalSecret` per credential; Terraform no longer projects Secrets.
       Rotating is changing the value at the source and waiting for the
       `refreshInterval`, no `terraform apply` needed
-      ([ADR-0007](../adr/0007-external-secrets-operator.md)).
-      Missing the final link: a Reloader that restarts pods when the Secret
-      changes, because `secretKeyRef` via env doesn't reload hot.
+      ([ADR-0007](../adr/0007-external-secrets-operator.md)). Reloader closes
+      the loop in wave -15: `secretKeyRef` via env doesn't reload hot, so the
+      gateway and the chat UI carry its annotations and restart on rotation.
 - [ ] **A hosted model in the catalog.** With everything local spend is zero and
       the FinOps dashboard is a rehearsal. A paid provider behind a variable
       turns budgets into real control.

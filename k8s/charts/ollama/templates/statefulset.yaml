@@ -59,8 +59,18 @@ spec:
               fi
               {{- range .Values.models }}
               echo "==> pulling {{ . }}"
-              if ! ollama pull {{ . | quote }}; then
-                echo "warning: failed to pull {{ . }} - will be pulled on first request" >&2
+              pulled=0
+              for attempt in 1 2 3 4 5; do
+                if ollama pull {{ . | quote }}; then pulled=1; break; fi
+                echo "pull attempt ${attempt} for {{ . }} failed; retrying" >&2
+                sleep $((attempt * 10))
+              done
+              if [ "$pulled" -ne 1 ]; then
+                echo "could not pull {{ . }} after 5 attempts" >&2
+                echo "the pod stays in Init on purpose: serving without weights" >&2
+                echo "turns this into a 500 from the gateway. See" >&2
+                echo "docs/ops/TROUBLESHOOTING.md 'model pull fails'." >&2
+                exit 1
               fi
               {{- end }}
               kill "$server_pid" 2>/dev/null || true

@@ -22,8 +22,11 @@ the app-of-apps `values.yaml` via a custom manager.
 
 | Chart | Version | Repository |
 | --- | --- | --- |
+| `external-secrets` | 2.10.0 | external-secrets |
+| `reloader` | 1.0.67 | stakater |
 | `kube-prometheus-stack` | 65.5.1 | prometheus-community |
 | `keda` | 2.15.2 | kedacore |
+| `tempo` | 1.11.0 | grafana |
 | `opentelemetry-collector` | 0.108.1 | open-telemetry |
 | `nvidia-device-plugin` | 0.17.0 | nvidia (GPU profile only) |
 | `dcgm-exporter` | 3.6.1 | nvidia (GPU profile only) |
@@ -46,6 +49,7 @@ the app-of-apps `values.yaml` via a custom manager.
 | `quay.io/prometheuscommunity/postgres-exporter` | `v0.15.0` | postgres chart |
 | `mcr.microsoft.com/presidio-analyzer` | `2.2.355` | presidio chart |
 | `mcr.microsoft.com/presidio-anonymizer` | `2.2.355` | presidio chart |
+| `ghcr.io/open-webui/open-webui` | `v0.11.4` | open-webui chart (GPU profile) |
 | `localstack/localstack` | `4.4.0` | cloud-mock |
 | `rancher/k3s` | `v1.31.2-k3s1` | CPU profile / CUDA image base |
 | `python` | `3.12-alpine` | bootstrap job |

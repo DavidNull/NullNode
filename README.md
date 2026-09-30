@@ -43,13 +43,13 @@ make smoke
 
 Everything mocked: AWS, S3, Bedrock, etc.
 <p align="center">
-  <img src="docs/media/mockeado.png" alt="AWS services mocked in NullNode" width="80%">
+  <img src="docs/media/aws-mocked.png" alt="AWS services mocked in NullNode" width="80%">
 </p>
 
 ## Architecture
 
 <p align="center">
-  <img src="docs/media/nullnode_arch_final.png" alt="NullNode architecture diagram" width="90%">
+  <img src="docs/media/nullnode-architecture.png" alt="NullNode architecture diagram" width="90%">
 </p>
 
 **Request flow**: Client → Traefik → LiteLLM (validates key + budget, checks cache) → Ollama (inference) → back through LiteLLM → updates Postgres, sends metrics/traces/audit.
@@ -71,10 +71,6 @@ Everything mocked: AWS, S3, Bedrock, etc.
 
 - **Terraform**: IaC stacks
 - **k3d**: Cluster config
-
-### Typical Request Flow
-
-Client → Traefik → LiteLLM (validates key + budget, checks cache) → Ollama (inference) → back through LiteLLM → updates Postgres, sends metrics/traces/audit.
 
 ## Before you start
 
@@ -109,10 +105,14 @@ terraform -chdir=infra/terraform/platform-bootstrap apply \
 The observability stack and model weights get downloaded. `^C` is safe:
 ArgoCD keeps reconciling in the background.
 
-### 5. No chat UI
+### 5. Chat UI on the GPU profile only
 
-`make up` exposes an OpenAI-compatible endpoint. Connect from VS Code with
-Continue or Cline: [docs/usage/CONNECT.md](docs/usage/CONNECT.md).
+The GPU profile brings up Open WebUI at `http://chat.nullnode.localhost:8080`
+(run `make hosts` first). The CPU profile leaves it off to save the RAM.
+
+Either way `make up` exposes an OpenAI-compatible endpoint, so you can connect
+from VS Code with Continue or Cline:
+[docs/usage/CONNECT.md](docs/usage/CONNECT.md).
 
 ### 6. Pinned versions
 
@@ -151,11 +151,14 @@ Also `make`, a fresh WSL2 install doesn't have it🤓:
 
 ## Recent Versions
 
-**v0.5.2** - Docs in English + updated architecture SVG
-**v0.5.1** - Tempo UI + better security
+**v0.5.5** - Model pulls unblocked, Open WebUI fixed, docs corrected
+**v0.5.2** - Docs in English + updated architecture diagram
+**v0.5.1** - Version history in the README
 **v0.5.0** - Complete observability with Tempo
 **v0.4.0** - NetworkPolicies + Reloader + Presidio
 **v0.3.1** - Open WebUI + license
+
+Full notes in [docs/releases/](docs/releases/).
 
 ## License
 

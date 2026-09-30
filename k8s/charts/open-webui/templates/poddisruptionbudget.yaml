@@ -1,3 +1,6 @@
+{{- if gt (int .Values.replicaCount) 1 }}
+# Only meaningful above one replica: with a single pod, minAvailable 1 blocks
+# every node drain outright.
 apiVersion: policy/v1
 kind: PodDisruptionBudget
 metadata:
@@ -9,3 +12,4 @@ spec:
   selector:
     matchLabels:
       {{- include "open-webui.selectorLabels" . | nindent 6 }}
+{{- end }}

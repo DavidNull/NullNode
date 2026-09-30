@@ -1,5 +1,48 @@
 # Progress log
 
+## [2026-09-30] — v0.5.5: the first deployment actually completes
+
+### Motivation
+
+Model pulls failed on every clean deployment and the symptom pointed at the
+host's network, so v0.5.2 made the failure non-fatal. That was the wrong layer:
+the cause was inside the cluster, and hiding it moved the error to a place where
+it was harder to read. Reviewing the path end to end surfaced a second component
+that could never have started at all.
+
+### What was done
+
+- **Ollama egress** (`k8s/charts/ollama/templates/networkpolicy.yaml`): the
+  policy declared `Egress` and allowed only UDP/53 and the gateway, so
+  `ollama pull` was denied at the CNI by k3s's NetworkPolicy controller. Added
+  DNS over TCP and TCP 443/80 to public addresses with RFC1918 excluded. Dropped
+  the egress rule to LiteLLM: the traffic runs the other way.
+- **Preload** (`statefulset.yaml`): five retries with increasing backoff, then a
+  hard failure. A pod with no weights used to pass its readiness probe and fail
+  later as a 500 from the gateway.
+- **Open WebUI**: read the gateway key as `master_key` from a Secret whose key is
+  `master-key`, so it never left `CreateContainerConfigError` on the GPU
+  profile. Fixed, and with it the two replicas over an ephemeral SQLite file,
+  the unset `WEBUI_SECRET_KEY`, the `RollingUpdate` against a ReadWriteOnce
+  volume, the PDB that blocked node drains at one replica, the ServiceMonitor
+  scraping an endpoint that does not exist, and the unpinned `main` tag.
+- **`versions-check.sh`**: Tempo and Reloader are pinned in
+  `k8s/platform/values.yaml` but were absent from the list the script checks.
+- **Docs**: `make up --from` (not a Make flag) in four places, a Secret name that
+  does not exist, the README claiming no chat UI, a duplicated paragraph,
+  `make hosts` missing `chat.<suffix>`, a dead `make netpol-on` target, and
+  `.trivyignore` comments citing the wrong rule IDs. New troubleshooting entries
+  for a blocked pull and for WSL2 losing outbound DNS.
+- **Release notes**: v0.5.1 and v0.5.2 written for the first time. The v0.5.1
+  notes had described a Tempo Ingress and two NetworkPolicies that were never
+  implemented; corrected, and moved to GOTO.md as pending.
+
+### Verification (offline, no cluster)
+
+`helm lint --strict` and `helm template` on all ten charts and both hardware
+profiles. The egress fix is reasoned from the manifests and k3s's default
+NetworkPolicy controller; it has not been confirmed against a running cluster.
+
 ## [2026-09-17] — External Secrets Operator replaces Terraform bridge
 
 ### Motivation
@@ -79,7 +122,7 @@ with 60 attempts × 10 s = 10 min margin, a slow startup exceeded the threshold.
 ### Problems found and fixed
 
 | # | File | Problem | Fix |
-|---|------|---------|-----|
+| --- | --- | --- | --- |
 | 1 | `k8s/bootstrap/root/templates/project.yaml` | **Root cause.** The `nullnode` AppProject didn't list `argocd` in `destinations`. `nullnode-root` deploys child Application CRDs to the `argocd` namespace. ArgoCD validates the destination against the AppProject before syncing → rejects the sync → `nullnode-root` stays in `Unknown` state with error `destination {... argocd} is not permitted in project nullnode` → child apps are never created | Add `namespace: argocd` to `destinations` using `{{ .Values.argocd.namespace }}` so it's not hardcoded |
 | 2 | `scripts/up.sh:213` | `err` instead of `die` on timeout — the script **didn't abort** and continued to the 50 min PostgreSQL wait (visible symptom of the failure) | Restructure with `synced` flag + `die` at the end if it didn't sync |
 | 3 | `scripts/up.sh:200` | Sync timeout too short: 60 × 10 s = 10 min. Insufficient margin for first startup (ArgoCD startup + first git clone) | Increased to 90 × 10 s = **15 min** |

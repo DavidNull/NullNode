@@ -97,6 +97,7 @@ fmt-check: ## Formatting only: terraform, shfmt, actionlint, hadolint, markdownl
 
 .PHONY: check
 check: validate security ## Everything a PR has to pass
+
 # --------------------------------------------------------------- images
 .PHONY: k3s-cuda-image
 k3s-cuda-image: ## Build the CUDA-enabled k3s node image (GPU profile only)
@@ -133,8 +134,8 @@ department-keys: ## Print the per-department virtual keys from the mocked Secret
 .PHONY: hosts
 hosts: ## Print the /etc/hosts line the Ingress hostnames need
 	@printf '# NullNode - add to /etc/hosts\n'
-	@printf '127.0.0.1 gateway.%s grafana.%s prometheus.%s argocd.%s\n' \
-	  '$(HOST_SUFFIX)' '$(HOST_SUFFIX)' '$(HOST_SUFFIX)' '$(HOST_SUFFIX)'
+	@printf '127.0.0.1 gateway.%s grafana.%s prometheus.%s argocd.%s chat.%s\n' \
+	  '$(HOST_SUFFIX)' '$(HOST_SUFFIX)' '$(HOST_SUFFIX)' '$(HOST_SUFFIX)' '$(HOST_SUFFIX)'
 
 .PHONY: logs
 logs: ## Follow the gateway logs
@@ -148,12 +149,6 @@ logs-ollama: ## Follow the inference logs
 sync: ## Force ArgoCD to re-reconcile every application now
 	@$(KUBECTL) -n argocd annotate applications --all --overwrite \
 	  argocd.argoproj.io/refresh=hard
-
-.PHONY: netpol-on
-netpol-on: ## Enable the datastore NetworkPolicies (off by default)
-	@printf 'set components.redis.values.networkPolicy.enabled and\n'
-	@printf 'components.postgres.values.networkPolicy.enabled to true in\n'
-	@printf 'k8s/platform/values.yaml, then commit and push - ArgoCD applies it.\n'
 
 .PHONY: load-test
 load-test: ## Run the k6 load test against the gateway
