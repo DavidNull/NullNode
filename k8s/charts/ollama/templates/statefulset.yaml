@@ -59,7 +59,7 @@ spec:
               fi
               {{- range .Values.models }}
               echo "==> pulling {{ . }}"
-              timeout 120 ollama pull {{ . | quote }} || echo "warning: failed to pull {{ . }} - will be pulled on first request" >&2
+              timeout 60 ollama pull {{ . | quote }} || echo "warning: failed to pull {{ . }} - will be pulled on first request" >&2
               {{- end }}
               kill "$server_pid" 2>/dev/null || true
               wait "$server_pid" 2>/dev/null || true

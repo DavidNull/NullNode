@@ -82,7 +82,7 @@ You need: NVIDIA driver on the host (on Windows if you use WSL2, not in the dist
 doesn't bring the runtime), and the device plugin, which installs automatically
 with the GPU profile. The `make up` preflight tells you what's missing.
 
-**No GPU:** `PROFILE=cpu make up`. Same thing, just slower responses.
+**No GPU:** `PROFILE=cpu make up`. Uses smaller model (qwen2.5:0.5b) for faster CPU inference.
 
 ### 2. With a single GPU don't scale replicas
 
