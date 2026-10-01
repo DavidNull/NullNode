@@ -25,20 +25,29 @@ spec:
       ports:
         - port: {{ .Values.service.port }}
   egress:
-    # Allow DNS
+    # DNS. TCP as well as UDP: a truncated answer is retried over TCP, and a
+    # silent failure there looks exactly like the registry being down.
     - to:
         - namespaceSelector: {}
       ports:
         - protocol: UDP
           port: 53
-    # Allow outbound to LiteLLM gateway (if needed for callbacks)
+        - protocol: TCP
+          port: 53
+    # The model registry. Without this the `ollama pull` in the init container
+    # is denied by the CNI, the pod comes up with no weights, and the first
+    # request fails at the gateway instead of here. Private ranges stay
+    # excluded, so this does not widen anything inside the cluster.
     - to:
-        - podSelector:
-            matchLabels:
-              nullnode.io/component: gateway
-          namespaceSelector:
-            matchLabels:
-              kubernetes.io/metadata.name: {{ .Values.global.namespace | default "nullnode-platform" }}
+        - ipBlock:
+            cidr: 0.0.0.0/0
+            except:
+              - 10.0.0.0/8
+              - 172.16.0.0/12
+              - 192.168.0.0/16
       ports:
-        - port: 4000
+        - protocol: TCP
+          port: 443
+        - protocol: TCP
+          port: 80
 {{- end }}

@@ -11,9 +11,11 @@ require_tool helm || die "helm is required"
 # name|repo|chart|version - keep in step with k8s/platform/values.yaml
 PINS=(
   "external-secrets|https://charts.external-secrets.io|external-secrets|2.10.0"
+  "reloader|https://stakater.github.io/stakater-charts|reloader|1.0.67"
   "keda|https://kedacore.github.io/charts|keda|2.15.2"
   "kube-prometheus-stack|https://prometheus-community.github.io/helm-charts|kube-prometheus-stack|65.5.1"
   "otel-collector|https://open-telemetry.github.io/opentelemetry-helm-charts|opentelemetry-collector|0.108.1"
+  "tempo|https://grafana.github.io/helm-charts|tempo|1.11.0"
   "nvidia-device-plugin|https://nvidia.github.io/k8s-device-plugin|nvidia-device-plugin|0.17.0"
   "dcgm-exporter|https://nvidia.github.io/dcgm-exporter/helm-charts|dcgm-exporter|3.6.1"
   "argo-cd|https://argoproj.github.io/argo-helm|argo-cd|7.7.11"

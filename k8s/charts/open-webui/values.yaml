@@ -2,16 +2,23 @@ global:
   namespace: nullnode-platform
   hostSuffix: nullnode.localhost
   ingressClassName: traefik
-  monitoring:
-    enabled: false
-    releaseLabel: kube-prometheus-stack
+  storageClass: local-path
 
 image:
   repository: ghcr.io/open-webui/open-webui
-  tag: "main"
+  # Pinned like everything else. `main` silently changes the UI between two
+  # `make up`. See docs/ops/VERSIONS.md.
+  tag: "v0.11.4"
   pullPolicy: IfNotPresent
 
-replicaCount: 2
+# One replica on purpose. Open WebUI keeps users, chats and sessions in a
+# SQLite file on its own volume; a second replica gets a second database and
+# rejects the first one's session tokens.
+replicaCount: 1
+
+persistence:
+  enabled: true
+  size: 4Gi
 
 service:
   port: 8080
@@ -20,17 +27,17 @@ ingress:
   enabled: true
   hostPrefix: chat
 
-# LiteLLM gateway configuration
 litellm:
-  # Gateway service URL within the cluster
   gatewayUrl: http://litellm.nullnode-platform.svc.cluster.local:4000/v1
-  # Secret containing the LiteLLM master key
+  # Synced by External Secrets; the keys are hyphenated, matching what the
+  # gateway Deployment reads from the same Secret.
   authSecret: nullnode-litellm-credentials
-  # Key in the secret that contains the master key
-  masterKeyKey: master_key
+  masterKeyKey: master-key
+  # Signs session cookies. Taken from the same Secret so it survives a
+  # restart - a generated one logs everybody out on every rollout.
+  sessionKeyKey: salt-key
 
-# Default department to use for API key (if not specified by user)
-# This should match one of the departments defined in the LiteLLM chart
+# Must match one of the departments in the LiteLLM chart.
 defaultDepartment: engineering
 
 resources:

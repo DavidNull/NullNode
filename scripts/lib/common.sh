@@ -13,11 +13,13 @@ KUBE_CONTEXT="k3d-${CLUSTER_NAME}"
 LOCALSTACK_ENDPOINT="${LOCALSTACK_ENDPOINT:-http://127.0.0.1:4566}"
 readonly CLUSTER_NAME PROFILE HOST_SUFFIX KUBE_CONTEXT LOCALSTACK_ENDPOINT
 
+# chat is only routable on the GPU profile, where Open WebUI is enabled.
 INGRESS_HOSTS=(
   "gateway.${HOST_SUFFIX}"
   "grafana.${HOST_SUFFIX}"
   "prometheus.${HOST_SUFFIX}"
   "argocd.${HOST_SUFFIX}"
+  "chat.${HOST_SUFFIX}"
 )
 # shellcheck disable=SC2034
 readonly INGRESS_HOSTS

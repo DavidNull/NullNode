@@ -1,0 +1,16 @@
+{{- if .Values.persistence.enabled }}
+# Users, chats and settings live in a SQLite file here. Without it every
+# rollout starts the UI empty.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "open-webui.fullname" . }}-data
+  labels:
+    {{- include "open-webui.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  storageClassName: {{ .Values.global.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.persistence.size }}
+{{- end }}

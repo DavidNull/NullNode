@@ -123,30 +123,35 @@ cluster on WSL, gateway name resolution gets complicated unnecessarily.
 
 ## Open WebUI, if you want a real chat
 
-Open WebUI is available as an optional app-of-apps component. To enable it:
+The GPU profile ships it enabled. Add the hostname to `/etc/hosts` (`make hosts`
+prints the line) and open:
 
-```bash
-# In k8s/platform/values.yaml (or values-gpu.yaml / values-cpu.yaml)
+`http://chat.nullnode.localhost:8080`
+
+Port 8080 is not optional: that is where k3d publishes Traefik.
+
+On the CPU profile it is off, to leave the RAM for inference. Turn it on in
+`k8s/platform/values-cpu.yaml`:
+
+```yaml
 components:
   openWebui:
     enabled: true
-    wave: "25"
-    values:
-      defaultDepartment: engineering
 ```
 
-After applying the change with GitOps, the chat will be available at:
-`http://chat.nullnode.localhost`
+Push the change - ArgoCD reconciles from git, not from your working copy.
 
-### Integrated version features
+### How the in-cluster version is wired
 
-- **Automatic Ingress:** No need to configure ports manually
-- **Injected key:** Uses LiteLLM's master key from the Secret, no environment variables
-- **Sync wave:** Deploys after the gateway (wave 25 vs 20) guaranteeing availability
-- **GitOps:** Everything managed from git, like the rest of the platform
-- **Security:** NetworkPolicy configured, PodDisruptionBudget for HA
-- **Monitoring:** ServiceMonitor integrated with Prometheus
-- **Dependencies:** Init container waits for gateway to be available
+- **Ingress:** routed by hostname through the single Traefik entrypoint.
+- **Key:** reads LiteLLM's master key from `nullnode-litellm-credentials`, the
+  same Secret the gateway reads. Nothing to paste.
+- **Sessions:** `WEBUI_SECRET_KEY` comes from the same Secret, so logins survive
+  a restart.
+- **State:** users and chats live on a 4 GiB PVC. One replica, because that
+  state is a SQLite file and a second replica would get its own copy.
+- **Sync wave 25:** deploys after the gateway (wave 20), and an init container
+  blocks until the gateway answers.
 
 ### Advanced configuration
 
@@ -156,6 +161,8 @@ components:
     enabled: true
     values:
       defaultDepartment: engineering
+      persistence:
+        size: 8Gi
       resources:
         requests:
           cpu: 200m
@@ -163,20 +170,22 @@ components:
         limits:
           memory: 1Gi
       networkPolicy:
-        enabled: true  # false by default
+        enabled: true # false by default
 ```
+
+Raising `replicaCount` needs a shared database first (`DATABASE_URL` pointed at
+Postgres). Without it, each replica keeps its own users and chats.
 
 ### Manual version (docker run)
 
-If you prefer not to integrate it in the cluster, you can keep using the external
-container:
+If you prefer not to run it in the cluster:
 
 ```bash
 docker run -d --name nullnode-chat -p 3001:8080 \
   --add-host gateway.nullnode.localhost:host-gateway \
   -e OPENAI_API_BASE_URL=http://gateway.nullnode.localhost:8080/v1 \
   -e OPENAI_API_KEY="$NULLNODE_API_KEY" \
-  ghcr.io/open-webui/open-webui:main
+  ghcr.io/open-webui/open-webui:v0.11.4
 ```
 
 The `--add-host gateway.nullnode.localhost:host-gateway` isn't optional: from

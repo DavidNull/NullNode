@@ -103,7 +103,8 @@ jobs:
           echo "=== NullNode Root Application Details ==="
           kubectl -n argocd get application nullnode-root -o yaml || true
           echo "=== ArgoCD Controller Logs ==="
-          kubectl -n argocd logs deployment/argocd-application-controller -c argocd-application-controller --tail=100 || true
+          kubectl -n argocd logs deployment/argocd-application-controller \
+            -c argocd-application-controller --tail=100 || true
           echo "=== ArgoCD Repo Server Logs ==="
           kubectl -n argocd logs deployment/argocd-repo-server -c argocd-repo-server --tail=100 || true
           echo "=== Datastore Resources ==="
@@ -162,7 +163,8 @@ jobs:
           echo "=== NullNode Root Application Details ==="
           kubectl -n argocd get application nullnode-root -o yaml || true
           echo "=== ArgoCD Controller Logs ==="
-          kubectl -n argocd logs deployment/argocd-application-controller -c argocd-application-controller --tail=100 || true
+          kubectl -n argocd logs deployment/argocd-application-controller \
+            -c argocd-application-controller --tail=100 || true
           echo "=== ArgoCD Repo Server Logs ==="
           kubectl -n argocd logs deployment/argocd-repo-server -c argocd-repo-server --tail=100 || true
           echo "=== Platform Resources ==="

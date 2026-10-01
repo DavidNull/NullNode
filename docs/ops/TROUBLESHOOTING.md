@@ -54,8 +54,8 @@ k3d cluster delete nullnode
 make up
 ```
 
-Or if you want to preserve state: `make up --from cloud-mock` to skip the cluster
-phase.
+Or if you want to preserve state: `./scripts/up.sh --from cloud-mock` skips the
+cluster phase (`make up` takes no flags of its own).
 
 ### LocalStack doesn't start / `terraform apply` fails in cloud-mock
 
@@ -70,7 +70,7 @@ If the container exists but doesn't respond:
 
 ```bash
 docker rm -f localstack
-make up --from cloud-mock
+./scripts/up.sh --from cloud-mock
 ```
 
 If there's a port conflict error (`4566 already in use`):
@@ -78,7 +78,7 @@ If there's a port conflict error (`4566 already in use`):
 ```bash
 lsof -i :4566
 # kill the process occupying it, then:
-make up --from cloud-mock
+./scripts/up.sh --from cloud-mock
 ```
 
 ### ArgoCD doesn't sync / applications in `Unknown` or `OutOfSync`
@@ -121,6 +121,73 @@ Normal on first boot: it's downloading model weights. With `make logs-ollama`
 you can see progress. For llama3.2 (3B) expect 5-15 minutes depending on your
 connection.
 
+### Ollama stuck in `Init`, "could not pull ... after 5 attempts"
+
+The `preload-models` init container could not reach the model registry. It
+retries five times and then fails on purpose: a pod that serves without weights
+turns this into a confusing 500 from the gateway much later.
+
+```bash
+kubectl -n nullnode-platform logs statefulset/ollama -c preload-models
+```
+
+Check, in order:
+
+1. **Does the host have outbound HTTPS?** From the distro, not from Windows:
+
+   ```bash
+   curl -sI https://registry.ollama.ai/v2/ | head -1
+   ```
+
+2. **Does the node container have it?** k3d nodes are Docker containers with
+   their own network namespace:
+
+   ```bash
+   docker exec k3d-nullnode-server-0 wget -qO- -T5 https://registry.ollama.ai/v2/
+   ```
+
+3. **Does DNS resolve inside the cluster?**
+
+   ```bash
+   kubectl -n nullnode-platform exec statefulset/ollama -- \
+     nslookup registry.ollama.ai
+   ```
+
+4. **Is the NetworkPolicy allowing egress?** Ollama's policy permits DNS and
+   TCP 443/80 to public addresses. If you tightened it, the pull is denied at
+   the CNI with no error from the registry - it just times out:
+
+   ```bash
+   kubectl -n nullnode-platform get networkpolicy ollama -o yaml
+   ```
+
+On a corporate network behind a TLS-intercepting proxy, none of the above
+helps: the registry handshake fails inside the pod regardless of policy. Pull
+the weights on the host and copy them into the volume instead:
+
+```bash
+ollama pull llama3.2:3b
+docker cp ~/.ollama/models \
+  k3d-nullnode-server-0:/var/lib/rancher/k3s/storage/<ollama-pvc>/.ollama/
+```
+
+### WSL2: the cluster has no outbound network at all
+
+WSL2 regenerates `/etc/resolv.conf` on every boot and a VPN client on the
+Windows side can leave it pointing at an unreachable resolver. The host and the
+k3d node containers inherit it. Confirm with `cat /etc/resolv.conf`, then pin it:
+
+```bash
+sudo tee /etc/wsl.conf <<'EOF'
+[network]
+generateResolvConf = false
+EOF
+sudo rm -f /etc/resolv.conf
+printf 'nameserver 1.1.1.1\n' | sudo tee /etc/resolv.conf
+```
+
+From Windows: `wsl --shutdown`, then reopen the distro and re-run `make up`.
+
 ---
 
 ## During `make smoke`
@@ -144,7 +211,7 @@ On Windows, if accessing from the browser, add the same line to
 The master key didn't reach the LiteLLM pod. Check that the secret exists:
 
 ```bash
-kubectl get secret litellm-master-key -n nullnode-platform
+kubectl get secret nullnode-litellm-credentials -n nullnode-platform
 ```
 
 If it doesn't exist, the Terraform `platform-bootstrap` didn't finish well.
@@ -171,7 +238,7 @@ curl http://127.0.0.1:4566/_localstack/health
 If LocalStack died (happens if Docker restarts):
 
 ```bash
-make up --from cloud-mock
+./scripts/up.sh --from cloud-mock
 ```
 
 ---

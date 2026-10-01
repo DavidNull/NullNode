@@ -10,16 +10,17 @@ spec:
   selector:
     matchLabels:
       {{- include "open-webui.selectorLabels" . | nindent 6 }}
+  # Recreate, not RollingUpdate: the data volume is ReadWriteOnce, so a surge
+  # pod would sit unschedulable waiting for the outgoing one to release it.
   strategy:
-    type: RollingUpdate
-    rollingUpdate:
-      maxSurge: 1
-      maxUnavailable: 0
+    type: Recreate
   template:
     metadata:
       labels:
         {{- include "open-webui.labels" . | nindent 8 }}
         nullnode.io/component: chat-ui
+      annotations:
+        secret.reloader.stakater.com/reload: "{{ .Values.litellm.authSecret }}"
     spec:
       securityContext:
         {{- toYaml .Values.podSecurityContext | nindent 8 }}
@@ -56,7 +57,6 @@ spec:
             - name: http
               containerPort: {{ .Values.service.port }}
           env:
-            # LiteLLM gateway configuration
             - name: OPENAI_API_BASE_URL
               value: {{ .Values.litellm.gatewayUrl | quote }}
             - name: OPENAI_API_KEY
@@ -64,15 +64,19 @@ spec:
                 secretKeyRef:
                   name: {{ .Values.litellm.authSecret }}
                   key: {{ .Values.litellm.masterKeyKey }}
-            # Default department for new users
+            - name: WEBUI_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.litellm.authSecret }}
+                  key: {{ .Values.litellm.sessionKeyKey }}
             - name: DEFAULT_DEPARTMENT
               value: {{ .Values.defaultDepartment | quote }}
-            # Disable telemetry
             - name: ANONYMIZED_TELEMETRY
               value: "False"
-            # WebUI configuration
             - name: WEBUI_NAME
               value: "NullNode Chat"
+            - name: DATA_DIR
+              value: /app/backend/data
           startupProbe:
             httpGet:
               path: /
@@ -94,4 +98,15 @@ spec:
             failureThreshold: 5
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: data
+              mountPath: /app/backend/data
+      volumes:
+        - name: data
+          {{- if .Values.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "open-webui.fullname" . }}-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
       terminationGracePeriodSeconds: 30

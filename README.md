@@ -1,6 +1,6 @@
-# NullNode <img src="docs/media/nullnode.png" alt="NullNode Logo" width="70" style="vertical-align: middle; margin-left: 10px;">
-
-**Everything a real platform has, but on your own hardware.**
+<p align="center">
+  <img src="docs/media/nullnode-banner.png" alt="NullNode Banner" width="100%">
+</p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/K3s-Kubernetes-FFC61C?style=flat-square&logo=k3s&logoColor=white" alt="K3s">
@@ -30,7 +30,7 @@ Local and private enterprise LLMOps platform on K3s. Implements local LLM infere
 Cost: 0€ (just electricity). Everything runs on your hardware and AWS services are mocked.
 
 ```bash
-make up          # GPU profile (default)
+make up          # GPU profile (default) - takes 10-20 minutes on first run
 PROFILE=cpu make up
 make status
 make smoke
@@ -43,40 +43,16 @@ make smoke
 
 Everything mocked: AWS, S3, Bedrock, etc.
 <p align="center">
-  <img src="docs/media/mockeado.png" alt="AWS services mocked in NullNode" width="80%">
+  <img src="docs/media/aws-mocked.png" alt="AWS services mocked in NullNode" width="80%">
 </p>
-
----
 
 ## Architecture
 
 <p align="center">
-  <img src="docs/media/nullnode-architecture.svg" alt="NullNode architecture diagram" width="90%">
+  <img src="docs/media/nullnode-architecture.png" alt="NullNode architecture diagram" width="90%">
 </p>
 
-The diagram shows the full stack: Ingress (Traefik), Control & Governance (LiteLLM, PostgreSQL, Redis), Execution (Ollama, Presidio), Observability (Prometheus, Grafana, Tempo, OTel), Secrets (External Secrets Operator, Reloader), GitOps (ArgoCD), Mock Cloud (LocalStack), and Infrastructure (Terraform, k3d).
-
-### Ingress Layer
-
-- **Traefik**: Single entry point, routes by host
-
-### Control & Governance Layer
-
-- **LiteLLM**: Gateway with keys, budgets, cache
-- **PostgreSQL**: Teams, keys, budgets
-- **Redis**: Prompt cache
-
-### Execution Layer
-
-- **Ollama**: Inference with model cache
-- **Presidio**: PII masking (GPU)
-
-### Observability Layer
-
-- **Prometheus + Grafana**: Metrics and dashboards
-- **Tempo**: Distributed tracing
-- **OTel Collector**: Trace processing
-- **DCGM Exporter**: VRAM metrics (GPU)
+**Request flow**: Client → Traefik → LiteLLM (validates key + budget, checks cache) → Ollama (inference) → back through LiteLLM → updates Postgres, sends metrics/traces/audit.
 
 ### Secrets Layer
 
@@ -96,10 +72,6 @@ The diagram shows the full stack: Ingress (Traefik), Control & Governance (LiteL
 - **Terraform**: IaC stacks
 - **k3d**: Cluster config
 
-### Typical Request Flow
-
-Client → Traefik → LiteLLM (validates key + budget, checks cache) → Ollama (inference) → back through LiteLLM → updates Postgres, sends metrics/traces/audit.
-
 ## Before you start
 
 ### 1. Defaults to NVIDIA GPU
@@ -110,7 +82,7 @@ You need: NVIDIA driver on the host (on Windows if you use WSL2, not in the dist
 doesn't bring the runtime), and the device plugin, which installs automatically
 with the GPU profile. The `make up` preflight tells you what's missing.
 
-**No GPU:** `PROFILE=cpu make up`. Same thing, just slower responses.
+**No GPU:** `PROFILE=cpu make up`. Uses smaller model (qwen2.5:0.5b) for faster CPU inference.
 
 ### 2. With a single GPU don't scale replicas
 
@@ -133,16 +105,21 @@ terraform -chdir=infra/terraform/platform-bootstrap apply \
 The observability stack and model weights get downloaded. `^C` is safe:
 ArgoCD keeps reconciling in the background.
 
-### 5. No chat UI
+### 5. Chat UI on the GPU profile only
 
-`make up` exposes an OpenAI-compatible endpoint. Connect from VS Code with
-Continue or Cline: [docs/usage/CONNECT.md](docs/usage/CONNECT.md).
+The GPU profile brings up Open WebUI at `http://chat.nullnode.localhost:8080`
+(run `make hosts` first). The CPU profile leaves it off to save the RAM.
 
-### 6. Pinned versions without network verification
+Either way `make up` exposes an OpenAI-compatible endpoint, so you can connect
+from VS Code with Continue or Cline:
+[docs/usage/CONNECT.md](docs/usage/CONNECT.md).
 
-Third-party charts are pinned blindly: run `make versions-check` before the
-first deployment. LiteLLM metrics depend on the pinned version and affect
-dashboards and the KEDA trigger ([ADR-0006](docs/adr/0006-metrics-sources.md)).
+### 6. Pinned versions
+
+Third-party charts are pinned to specific versions. Run `make versions-check`
+before the first deployment to verify they exist. LiteLLM metrics depend on the
+pinned version and affect dashboards and the KEDA trigger
+([ADR-0006](docs/adr/0006-metrics-sources.md)).
 
 ---
 
@@ -174,11 +151,14 @@ Also `make`, a fresh WSL2 install doesn't have it🤓:
 
 ## Recent Versions
 
-**v0.5.2** - English documentation + updated architecture svg
-**v0.5.1** - Tempo UI + better security
+**v0.5.5** - Model pulls unblocked, Open WebUI fixed, docs corrected
+**v0.5.2** - Docs in English + updated architecture diagram
+**v0.5.1** - Version history in the README
 **v0.5.0** - Complete observability with Tempo
 **v0.4.0** - NetworkPolicies + Reloader + Presidio
 **v0.3.1** - Open WebUI + license
+
+Full notes in [docs/releases/](docs/releases/).
 
 ## License
 

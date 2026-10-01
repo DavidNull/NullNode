@@ -7,3 +7,5 @@ MD034: false
 MD025:
   front_matter_title: ""
 MD033: false
+# The README opens with the banner image, not a heading.
+MD041: false

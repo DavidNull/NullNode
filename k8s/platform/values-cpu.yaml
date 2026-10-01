@@ -24,16 +24,16 @@ components:
         minReplicas: 1
         maxReplicas: 3
       models:
-        - llama3.2:1b
+        - qwen2.5:0.5b
 
   litellm:
     values:
       # Must match ollama.models: the gateway can only route to pulled
       # weights.
       models:
-        - name: llama3.2
+        - name: qwen2.5
           params:
-            model: ollama_chat/llama3.2:1b
+            model: ollama_chat/qwen2.5:0.5b
           info:
             mode: chat
       router:
@@ -46,16 +46,16 @@ components:
           budgetDuration: 30d
           tpmLimit: 50000
           rpmLimit: 120
-          models: ["llama3.2"]
+          models: ["qwen2.5"]
         - name: data-science
           maxBudget: 250
           budgetDuration: 30d
           tpmLimit: 50000
           rpmLimit: 120
-          models: ["llama3.2"]
+          models: ["qwen2.5"]
         - name: support
           maxBudget: 25
           budgetDuration: 30d
           tpmLimit: 20000
           rpmLimit: 60
-          models: ["llama3.2"]
+          models: ["qwen2.5"]
