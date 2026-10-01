@@ -25,7 +25,7 @@
 
 The idea came from something pretty specific: a group of people at home who want their own lightweight AI (because with home resources you can't do much more), without paying a cent, and with real control over who spends what and when. Governance, basically.
 
-Local and private enterprise LLMOps platform on K3s. Implements local LLM inference with dynamic scaling (KEDA), gateway with budgets and cost control (LiteLLM), prompt cache (Redis), dedicated GenAI observability, and 100% automated GitOps deployment with ArgoCD and Terraform.
+Local and private production-inspired LLMOps platform on K3s. Implements local LLM inference with dynamic scaling (KEDA), gateway with budgets and cost control (LiteLLM), prompt cache (Redis), dedicated GenAI observability, and 100% automated GitOps deployment with ArgoCD and Terraform.
 
 Cost: 0€ (just electricity). Everything runs on your hardware and AWS services are mocked.
 
@@ -116,10 +116,15 @@ from VS Code with Continue or Cline:
 
 ### 6. Pinned versions
 
-Third-party charts are pinned to specific versions. Run `make versions-check`
-before the first deployment to verify they exist. LiteLLM metrics depend on the
-pinned version and affect dashboards and the KEDA trigger
-([ADR-0006](docs/adr/0006-metrics-sources.md)).
+Third-party charts are pinned to specific versions, **all verified as of v0.5.5**
+with `make versions-check`. Re-run it before deploying if you bump any chart.
+
+<p align="center">
+  <img src="docs/media/make_versions_check.png" width="40%" alt="make versions-check output verifying all pinned chart versions (v0.5.5)">
+</p>
+
+LiteLLM metrics depend on the pinned version and affect dashboards and the KEDA
+trigger ([ADR-0006](docs/adr/0006-metrics-sources.md)).
 
 ---
 
@@ -173,4 +178,4 @@ If this project helps you in any way, a ⭐ would mean a lot.
   <img src="docs/media/NullNode-tepig.gif" alt="NullNode Tepig" width="6%">
 </p>
 
-<p align="center">DavidNull 🐰</p>
+<p align="center">DavidNull</p>
