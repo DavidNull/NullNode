@@ -105,28 +105,32 @@ terraform -chdir=infra/terraform/platform-bootstrap apply \
 The observability stack and model weights get downloaded. `^C` is safe:
 ArgoCD keeps reconciling in the background.
 
-### 5. Chat UI on the GPU profile only
-
-The GPU profile brings up Open WebUI at `http://chat.nullnode.localhost:8080`
-(run `make hosts` first). The CPU profile leaves it off to save the RAM.
-
-Either way `make up` exposes an OpenAI-compatible endpoint, so you can connect
-from VS Code with Continue or Cline:
-[docs/usage/CONNECT.md](docs/usage/CONNECT.md).
-
-### 6. Pinned versions
+### 5. Pinned versions
 
 Third-party charts are pinned to specific versions, **all verified as of v0.5.5**
 with `make versions-check`. Re-run it before deploying if you bump any chart.
 
 <p align="center">
-  <img src="docs/media/make_versions_check.png" width="40%" alt="make versions-check output verifying all pinned chart versions (v0.5.5)">
+  <img src="docs/media/make-versions-check.png" width="40%" alt="make versions-check output verifying all pinned chart versions (v0.5.5)">
 </p>
 
 LiteLLM metrics depend on the pinned version and affect dashboards and the KEDA
 trigger ([ADR-0006](docs/adr/0006-metrics-sources.md)).
 
 ---
+
+## What you get
+
+Chat through Open WebUI at `http://chat.nullnode.localhost:8080`, or point any
+OpenAI-compatible client at the gateway — Continue, Cline, the SDKs:
+[docs/usage/CONNECT.md](docs/usage/CONNECT.md).
+
+<!-- Drop the chat screenshot at docs/media/chat.png and this renders itself. -->
+<p align="center">
+  <img src="docs/media/chat.png" alt="NullNode chat through Open WebUI" width="80%">
+</p>
+
+Dashboards for spend, GenAI traffic and VRAM:
 
 <p align="center">
   <img src="docs/media/grafana.png" alt="Grafana dashboards: GenAI, spend and VRAM" width="80%">
@@ -156,6 +160,7 @@ Also `make`, a fresh WSL2 install doesn't have it🤓:
 
 ## Recent Versions
 
+**v0.6.0** - Chat UI works, teardown finishes cleanly
 **v0.5.5** - Model pulls unblocked, Open WebUI fixed, docs corrected
 **v0.5.2** - Docs in English + updated architecture diagram
 **v0.5.1** - Version history in the README
