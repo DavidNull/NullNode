@@ -75,8 +75,20 @@ spec:
               value: "False"
             - name: WEBUI_NAME
               value: "NullNode Chat"
+            # Not /app/backend/data: the image bakes the sentence-transformers
+            # embedding model into /app/backend/data/cache at build time, and a
+            # volume mounted on the parent hides it. Open WebUI would then try
+            # to re-download it from HuggingFace on every cold start.
             - name: DATA_DIR
-              value: /app/backend/data
+              value: /app/backend/data/store
+            # Routing goes through LiteLLM. Left on, Open WebUI also probes
+            # http://localhost:11434/api, which nothing serves in this pod.
+            - name: ENABLE_OLLAMA_API
+              value: "False"
+            # Sets HF_HUB_OFFLINE and drops the update check. The embedding
+            # model is already in the image; nothing here needs the internet.
+            - name: OFFLINE_MODE
+              value: "true"
           startupProbe:
             httpGet:
               path: /
@@ -100,7 +112,7 @@ spec:
             {{- toYaml .Values.resources | nindent 12 }}
           volumeMounts:
             - name: data
-              mountPath: /app/backend/data
+              mountPath: /app/backend/data/store
       volumes:
         - name: data
           {{- if .Values.persistence.enabled }}

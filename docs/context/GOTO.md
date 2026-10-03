@@ -56,6 +56,9 @@ None of this has been executed. Check order:
       `tempo.nullnode.localhost`; it was never written. Traces are reachable
       today only through the Grafana datasource. Same for the Tempo and Reloader
       NetworkPolicies those notes claimed.
+- [x] **Confirm the v0.6.0 fixes on a live cluster.** The Open WebUI mount path
+      and the teardown finalizer fix are both reasoned from source and validated
+      offline only. Neither has been watched end to end.
 - [ ] **Open WebUI beyond one replica.** Its state is a SQLite file on a
       ReadWriteOnce volume, so the chart is pinned to one replica. Pointing
       `DATABASE_URL` at the existing Postgres would lift that.

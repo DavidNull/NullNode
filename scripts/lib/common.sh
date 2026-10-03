@@ -94,6 +94,16 @@ tf() {
   TF_IN_AUTOMATION=1 terraform -chdir="${REPO_ROOT}/infra/terraform/${stack}" "$@"
 }
 
+# Same, with a wall-clock limit. A destroy that blocks on a stuck finalizer
+# would otherwise hang until someone notices, leaving every later phase - and
+# every container - untouched.
+tf_limited() {
+  local secs="$1" stack="$2"
+  shift 2
+  TF_IN_AUTOMATION=1 timeout --foreground "$secs" \
+    terraform -chdir="${REPO_ROOT}/infra/terraform/${stack}" "$@"
+}
+
 localstack_healthy() {
   curl -fsS --max-time 5 "${LOCALSTACK_ENDPOINT}/_localstack/health" 2>/dev/null |
     grep -q '"s3"'

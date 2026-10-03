@@ -1,5 +1,43 @@
 # Progress log
 
+## [2026-10-02] — v0.6.0: chat UI works, teardown finishes
+
+### Motivation
+
+v0.5.5 got the platform to converge, which exposed the next two failures: the
+chat UI answered with an error instead of a page, and `make down` printed
+success while leaving the whole stack running.
+
+### What was done
+
+- **Open WebUI data volume** (`k8s/charts/open-webui/templates/deployment.yaml`):
+  v0.5.5 mounted the PVC at `/app/backend/data`, which is also where the image
+  bakes the sentence-transformers embedding model (`HF_HOME`,
+  `SENTENCE_TRANSFORMERS_HOME` and two more point under it). The empty volume
+  hid the cache, so startup tried to fetch the model from HuggingFace and died
+  on a network that does not permit it. Mount moved to
+  `/app/backend/data/store` with `DATA_DIR` set to match.
+- **Open WebUI defaults**: `ENABLE_OLLAMA_API=False` (it was probing
+  `localhost:11434`, which nothing serves in that pod - routing goes through
+  LiteLLM) and `OFFLINE_MODE=true`.
+- **Teardown** (`scripts/down.sh`): ArgoCD's `resources-finalizer` was left on
+  every Application while the controller was being uninstalled, so the `argocd`
+  namespace could never delete and terraform blocked on it - taking the cluster,
+  LocalStack and volume phases with it. Finalizers are now cleared first, both
+  destroys are time-bounded via `tf_limited`, a sweep phase removes surviving
+  containers and the cluster network, and an incomplete platform destroy
+  discards its own state file.
+- **Docs**: README drops the "no chat UI" caveat and gains a slot for the chat
+  screenshot; `make_versions_check.png` renamed to kebab-case.
+
+### Verification (offline, no cluster)
+
+Full `validate` surface: helm lint/template on ten charts and both profiles,
+shellcheck, yamllint, markdownlint, python and JSON. The Open WebUI cache paths
+and env defaults were read from the upstream `Dockerfile`, `env.py` and
+`config.py` at tag v0.11.4 rather than assumed. Neither fix has been exercised
+against a running cluster.
+
 ## [2026-09-30] — v0.5.5: the first deployment actually completes
 
 ### Motivation
